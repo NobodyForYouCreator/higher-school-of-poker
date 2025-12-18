@@ -6,3 +6,15 @@ __pycache__/
 *.py[cod]
 .env
 .idea/
+backend/.env
+
+.env
+backend/.env
+
+__pycache__/
+*.pyc
+.venv/
+
+.DS_Store
+.idea/
+.vscode/
