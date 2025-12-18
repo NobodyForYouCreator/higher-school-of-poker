@@ -1,15 +1,20 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(BACKEND_DIR / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
     app_name: str = "Higher School of Poker"
     api_prefix: str = "/api"
-
+    cors_origins: str = ""
     database_url: str = "postgresql+asyncpg://postgres:postgres@db:5432/poker"
 
     def cors_list(self) -> list[str]:
