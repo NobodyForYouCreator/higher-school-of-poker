@@ -11,6 +11,7 @@ class Table:
         max_players: int = 9,
         small_blind: int = 50,
         big_blind: int = 100,
+        table_id: int = 0
     ):
         self.max_players = max_players
         self.small_blind = small_blind
@@ -18,6 +19,7 @@ class Table:
         self.players: List[PlayerState] = []
         self.dealer = 0
         self.game_state: Optional[GameState] = None
+        self.table_id = table_id
 
     def seat_player(self, user_id: int, stack: int) -> PlayerState:
         if len(self.players) >= self.max_players:
