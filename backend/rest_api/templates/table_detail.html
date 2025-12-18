@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Стол #{{ table.table_id }}</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #05090f;
+            --card: #111b2a;
+            --border: rgba(255, 255, 255, 0.1);
+            --accent: #e94873;
+            --muted: #95a0b2;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top, #1a2131 0%, #05090f 70%);
+            color: #f0f4ff;
+            min-height: 100vh;
+            padding: 32px 16px 48px;
+        }
+        .container {
+            width: min(100%, 1080px);
+            margin: 0 auto;
+        }
+        .breadcrumb {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+            font-size: clamp(2rem, 4vw, 2.8rem);
+        }
+        .status-pill {
+            display: inline-flex;
+            padding: 6px 16px;
+            border-radius: 999px;
+            background: rgba(233, 72, 115, 0.12);
+            border: 1px solid rgba(233, 72, 115, 0.5);
+            color: var(--accent);
+            font-size: 0.82rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 24px;
+        }
+        .card {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        }
+        .card h2 {
+            margin: 0 0 16px;
+            font-size: 1.1rem;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.95rem;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: var(--muted);
+        }
+        .chips {
+            font-weight: 600;
+            color: #40f1a2;
+        }
+        .board {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .card-visual {
+            width: 52px;
+            height: 72px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: linear-gradient(145deg, #223851, #121b2b);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+        }
+        .list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.015);
+        }
+        .list-item .name {
+            font-weight: 600;
+        }
+        .list-item .meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        .empty {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/api/tables" class="breadcrumb">← ко всем столам</a>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <h1>Стол #{{ table.table_id }}</h1>
+            <span class="status-pill">{{ table.status }}</span>
+        </div>
+        <p style="color:var(--muted); margin-top:6px;">Макс. игроков: {{ table.max_players }} · Блайнды {{ table.small_blind }} / {{ table.big_blind }}</p>
+
+        <div class="grid">
+            <section class="card">
+                <h2>Состояние игры</h2>
+                <div class="info-row"><span class="info-label">Фаза</span><span>{{ table.phase }}</span></div>
+                <div class="info-row"><span class="info-label">Банк</span><span class="chips">{{ table.pot }}</span></div>
+                <div class="info-row"><span class="info-label">Игроков</span><span>{{ table.players }}/{{ table.max_players }}</span></div>
+                <div class="info-row"><span class="info-label">Зрителей</span><span>{{ table.spectators }}</span></div>
+                <div style="margin-top:14px;">
+                    <div class="info-label" style="margin-bottom:6px;">Борд</div>
+                    {% if table.board %}
+                        <div class="board">
+                            {% for card in table.board %}
+                                <div class="card-visual">{{ card }}</div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty">Карты стола ещё не открыты.</div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Игроки</h2>
+                {% if table.players_list %}
+                    <div class="list">
+                        {% for player in table.players_list %}
+                            <div class="list-item">
+                                <div>
+                                    <div class="name">Игрок {{ player.user_id }}</div>
+                                    <div style="font-size:0.85rem; color:var(--muted);">позиция {{ player.position + 1 }}</div>
+                                </div>
+                                <div class="meta">
+                                    <span class="chips">{{ player.stack }}</span>
+                                    <span>{{ player.status }}</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty">Пока никто не сел за стол.</div>
+                {% endif %}
+            </section>
+
+            <section class="card">
+                <h2>Зрители</h2>
+                {% if table.spectators_list %}
+                    <div class="list">
+                        {% for spectator in table.spectators_list %}
+                            <div class="list-item">
+                                <div class="name">User {{ spectator.user_id }}</div>
+                                <div class="meta">{{ spectator.status }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty">Зрителей пока нет.</div>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+</body>
+</html>
