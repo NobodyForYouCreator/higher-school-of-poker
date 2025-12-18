@@ -1,0 +1,76 @@
+from __future__ import annotations
+
+from typing import List, Optional
+
+from backend.poker_engine.game_state import GameState, PlayerAction
+from backend.poker_engine.player_state import PlayerState, PlayerStatus
+
+class Table:
+    def __init__(
+        self,
+        max_players: int = 9,
+        small_blind: int = 50,
+        big_blind: int = 100,
+    ):
+        self.max_players = max_players
+        self.small_blind = small_blind
+        self.big_blind = big_blind
+        self.players: List[PlayerState] = []
+        self.dealer = 0
+        self.game_state: Optional[GameState] = None
+
+    def seat_player(self, user_id: int, stack: int) -> PlayerState:
+        if len(self.players) >= self.max_players:
+            raise RuntimeError("The table is full.")
+        position = len(self.players)
+        player = PlayerState(user_id=user_id, stack=stack, position=position)
+        self.players.append(player)
+        return player
+
+    def leave(self, user_id: int) -> None:
+        self.players = [player for player in self.players if player.user_id != user_id]
+        for idx, player in enumerate(self.players):
+            player.position = idx
+
+    def start_game(self) -> GameState:
+        if len(self.players) < 2:
+            raise RuntimeError("At least two players required to start.")
+        self.game_state = GameState(
+            players=self.players,
+            dealer=self.dealer,
+            small_blind=self.small_blind,
+            big_blind=self.big_blind,
+        )
+        self.game_state.start_game()
+        return self.game_state
+
+    def apply_action(
+        self,
+        user_id: int,
+        action: PlayerAction,
+        amount: int = 0,
+    ) -> None:
+        if not self.game_state:
+            raise RuntimeError("Game has not been started.")
+        player = self._get_player_by_id(user_id)
+        self.game_state.apply_action(player, action, amount)
+        if not self.game_state.hand_active:
+            self._advance_dealer_button()
+
+    def _advance_dealer_button(self) -> None:
+        if not self.players:
+            self.dealer = 0
+            return
+        next_index = (self.dealer + 1) % len(self.players)
+        for _ in range(len(self.players)):
+            player = self.players[next_index]
+            if player.stack > 0 and player.status != PlayerStatus.SPECTATOR:
+                self.dealer = next_index
+                return
+            next_index = (next_index + 1) % len(self.players)
+
+    def _get_player_by_id(self, user_id: int) -> PlayerState:
+        for player in self.players:
+            if player.user_id == user_id:
+                return player
+        raise RuntimeError(f"Player with id {user_id} is not at the table.")
