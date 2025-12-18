@@ -7,6 +7,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
   backend:
     build:
@@ -18,6 +20,7 @@ services:
       - db
     ports:
       - "8001:8000"
-    command: [ "poetry", "run", "uvicorn", "backend.rest_api.main:app", "--host", "0.0.0.0", "--port", "8000" ]
+    command: ["poetry","run","uvicorn","rest_api.main:app","--host","0.0.0.0","--port","8000"]
+
 volumes:
   pg_data:
