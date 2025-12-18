@@ -4,6 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
+JWT_SECRET = "gustokashinmuseflycone"
+JWT_EXPIRES_MINUTES = 52
+JWT_ALGORITHM = "HS256"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
