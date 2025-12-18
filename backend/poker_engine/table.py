@@ -5,23 +5,30 @@ from typing import List, Optional
 from backend.poker_engine.game_state import GameState, PlayerAction
 from backend.poker_engine.player_state import PlayerState, PlayerStatus
 
+
 class Table:
     def __init__(
-        self,
-        max_players: int = 9,
-        small_blind: int = 50,
-        big_blind: int = 100,
-        table_id: int = 0
+            self,
+            max_players: int = 9,
+            small_blind: int = 50,
+            big_blind: int = 100,
+            table_id: int = 0
     ):
         self.max_players = max_players
         self.small_blind = small_blind
         self.big_blind = big_blind
         self.players: List[PlayerState] = []
+        self.spectators: List[PlayerState] = []
         self.dealer = 0
         self.game_state: Optional[GameState] = None
         self.table_id = table_id
 
-    def seat_player(self, user_id: int, stack: int) -> PlayerState:
+    def seat_player(self, user_id: int, stack: int, is_spectator: bool = False) -> PlayerState:
+        if is_spectator:
+            spectator = PlayerState(user_id=user_id, stack=-1, position=-1, status=PlayerStatus.SPECTATOR)
+            self.spectators.append(spectator)
+            return spectator
+
         if len(self.players) >= self.max_players:
             raise RuntimeError("The table is full.")
         position = len(self.players)
@@ -31,6 +38,7 @@ class Table:
 
     def leave(self, user_id: int) -> None:
         self.players = [player for player in self.players if player.user_id != user_id]
+        self.spectators = [spectator for spectator in self.spectators if spectator.user_id != user_id]
         for idx, player in enumerate(self.players):
             player.position = idx
 
@@ -47,10 +55,10 @@ class Table:
         return self.game_state
 
     def apply_action(
-        self,
-        user_id: int,
-        action: PlayerAction,
-        amount: int = 0,
+            self,
+            user_id: int,
+            action: PlayerAction,
+            amount: int = 0,
     ) -> None:
         if not self.game_state:
             raise RuntimeError("Game has not been started.")
