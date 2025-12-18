@@ -139,14 +139,17 @@ class GameState:
                 raise RuntimeError("Player cannot go all-in with zero stack.")
             committed = player.go_all_in()
             self.pot += committed
-            if player.bet > self.current_bet:
-                raise_size = player.bet - self.current_bet
-                self.current_bet = player.bet
+            previous_bet = self.current_bet
+            self.current_bet = max(self.current_bet, player.bet)
+            raise_size = player.bet - previous_bet
+            if raise_size > 0:
                 if raise_size >= self.minimum_raise:
                     self.minimum_raise = raise_size
                     self.last_raiser_index = player_index
                     self._reset_round_actions(except_index=player_index)
-            # If all-in did not reach current bet or raise size too small, action counts as call
+                else:
+                    # Shove that does not meet minimum raise still forces others to respond.
+                    self._mark_players_need_to_call(except_index=player_index)
         else:
             raise ValueError(f"Unsupported action {action}")
 
@@ -357,3 +360,11 @@ class GameState:
                 player.has_acted_in_round = False
             else:
                 player.has_acted_in_round = True
+
+    def _mark_players_need_to_call(self, except_index: Optional[int]) -> None:
+        for idx, player in enumerate(self.players):
+            if idx == except_index:
+                player.has_acted_in_round = True
+                continue
+            if player.status == PlayerStatus.ACTIVE and player.bet != self.current_bet:
+                player.has_acted_in_round = False

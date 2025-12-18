@@ -130,6 +130,18 @@
             color: var(--muted);
             font-size: 0.92rem;
         }
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 22px;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #05090f;
+            text-decoration: none;
+            font-weight: 600;
+            border: 1px solid rgba(233, 72, 115, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -137,7 +149,10 @@
         <a href="/api/tables" class="breadcrumb">← ко всем столам</a>
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <h1>Стол #{{ table.table_id }}</h1>
-            <span class="status-pill">{{ table.status }}</span>
+            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                <span class="status-pill">{{ table.status }}</span>
+                <a class="action-btn" href="/api/tables/{{ table.table_id }}/game_started">Начать игру</a>
+            </div>
         </div>
         <p style="color:var(--muted); margin-top:6px;">Макс. игроков: {{ table.max_players }} · Блайнды {{ table.small_blind }} / {{ table.big_blind }}</p>
 
@@ -146,6 +161,10 @@
                 <h2>Состояние игры</h2>
                 <div class="info-row"><span class="info-label">Фаза</span><span>{{ table.phase }}</span></div>
                 <div class="info-row"><span class="info-label">Банк</span><span class="chips">{{ table.pot }}</span></div>
+                <div class="info-row" style="font-size:1.1rem;">
+                    <span class="info-label">Текущая ставка</span>
+                    <span style="font-weight:600;">{{ table.current_bet }}</span>
+                </div>
                 <div class="info-row"><span class="info-label">Игроков</span><span>{{ table.players }}/{{ table.max_players }}</span></div>
                 <div class="info-row"><span class="info-label">Зрителей</span><span>{{ table.spectators }}</span></div>
                 <div style="margin-top:14px;">
@@ -175,7 +194,9 @@
                                 <div class="meta">
                                     <span class="chips">{{ player.stack }}</span>
                                     <span>{{ player.status }}</span>
+                                    <span>Ставка {{ player.bet }}</span>
                                 </div>
+                                <div style="margin-top:6px; font-size:0.85rem; color:var(--muted);">Ставка в раунде: {{ player.bet }}</div>
                             </div>
                         {% endfor %}
                     </div>
