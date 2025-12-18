@@ -15,6 +15,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from database.base import Base
 from rest_api.core.config import settings
 
+from models.user import User
+
 config = context.config
 
 if config.config_file_name is not None:
