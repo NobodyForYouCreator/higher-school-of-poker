@@ -15,12 +15,12 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     env_file:
-      - ./backend/.env
+      - ./backend/.env.example
     depends_on:
       - db
     ports:
-      - "8001:8000"
-    command: ["poetry","run","uvicorn","rest_api.main:app","--host","0.0.0.0","--port","8000"]
+      - "8000:8000"
+    command: ["poetry","run","uvicorn","backend.rest_api.main:app","--host","0.0.0.0","--port","8000"]
 
 volumes:
   pg_data:

@@ -10,12 +10,16 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from database.base import Base
-from rest_api.core.config import settings
+from backend.database.base import Base
+from backend.rest_api.core.config import settings
 
-from models.user import User
+# Import models so they are registered in Base.metadata for autogenerate.
+from backend.models.user import User  # noqa: F401
+from backend.models.player_stats import PlayerStats  # noqa: F401
 
 config = context.config
 
