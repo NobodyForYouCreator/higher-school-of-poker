@@ -66,5 +66,6 @@ class GameService:
                 net_stack_delta=net_delta,
                 resulting_balance=p.stack,
             )
+
             update_stats(existing, [delta])
         await db.commit()
