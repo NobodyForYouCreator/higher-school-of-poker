@@ -1,2 +1,4 @@
-from .player_stats import PlayerStats  # noqa: F401
-from .user import User  # noqa: F401
+from .player_stats import PlayerStats
+from .user import User
+from .finished_game import FinishedGame
+from .player_game import PlayerGame
