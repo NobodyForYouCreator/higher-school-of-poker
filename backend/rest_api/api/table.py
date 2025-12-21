@@ -1,17 +1,22 @@
 from pathlib import Path
 from random import randint
 
-from fastapi import APIRouter, Request, Query, HTTPException, Form
+from fastapi import APIRouter, Request, Query, HTTPException, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from backend.poker_engine.table import Table
 from backend.poker_engine.game_state import PlayerAction
+from backend.database.session import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from backend.services.game_service import GameService
 
 router = APIRouter(tags=["table"])
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 tables_dict: dict[int, Table] = {}
+
+game_service = GameService()
 
 
 @router.get("/tables", response_class=HTMLResponse)
@@ -77,19 +82,22 @@ def get_table_info(request: Request, table_id: int):
 
 
 @router.get("/tables/{table_id}/game_started", response_class=HTMLResponse)
-def start_or_resume_game(request: Request, table_id: int, error: str | None = Query(default=None)):
+async def start_or_resume_game(
+    request: Request,
+    table_id: int,
+    error: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
     table = tables_dict.get(table_id)
     if table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-
-    status_message = None
+    status_message: str | None = None
     if not table.game_state or not table.game_state.hand_active:
         try:
-            table.start_game()
+            await game_service.start_hand(table)
             status_message = "Новая раздача началась."
         except RuntimeError as exc:
             status_message = str(exc)
-
     context = {
         "request": request,
         "table": _build_game_snapshot(table),
@@ -101,19 +109,19 @@ def start_or_resume_game(request: Request, table_id: int, error: str | None = Qu
 
 
 @router.post("/tables/{table_id}/game_started")
-def apply_game_action(
+async def apply_game_action(
     request: Request,
     table_id: int,
     user_id: int = Form(...),
     action: str = Form(...),
     amount: str = Form(default=""),
-):
+    db: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
     table = tables_dict.get(table_id)
     if table is None:
         raise HTTPException(status_code=404, detail="Table not found")
     if not table.game_state or not table.game_state.hand_active:
         return RedirectResponse(f"/api/tables/{table_id}", status_code=303)
-
     try:
         player_action = PlayerAction(action)
     except ValueError:
@@ -124,7 +132,6 @@ def apply_game_action(
             "error": "Неизвестное действие.",
         }
         return templates.TemplateResponse("table_game.html", context, status_code=400)
-
     amount_value = 0
     if amount and amount.strip():
         try:
@@ -138,8 +145,8 @@ def apply_game_action(
             }
             return templates.TemplateResponse("table_game.html", context, status_code=400)
     try:
-        table.apply_action(user_id, player_action, amount_value)
-    except Exception as exc:  # pylint: disable=broad-except
+        await game_service.apply_action(table, user_id, player_action, amount_value, db)
+    except Exception as exc:
         context = {
             "request": request,
             "table": _build_game_snapshot(table),
@@ -147,7 +154,6 @@ def apply_game_action(
             "error": str(exc),
         }
         return templates.TemplateResponse("table_game.html", context, status_code=400)
-
     if table.game_state and not table.game_state.hand_active:
         return templates.TemplateResponse(
             "table_game_result.html",

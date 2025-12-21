@@ -21,10 +21,7 @@ class GameService:
         table.start_game()
 
     async def apply_action(self, table: Table, user_id: int, action: PlayerAction, amount: int, db: AsyncSession) -> None:
-        player = next((p for p in table.players if p.user_id == user_id), None)
-        if player is None:
-            raise RuntimeError("Player not seated at this table.")
-        table.apply_action(player, action, amount)
+        table.apply_action(user_id, action, amount)
         if not table.game_state.hand_active:
             await self._record_finished_hand(table, db)
 
