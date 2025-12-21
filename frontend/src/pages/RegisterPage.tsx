@@ -30,7 +30,6 @@ export function RegisterPage() {
           try {
             const { access_token } = await authApi.register({
               username: username.trim(),
-              email: email.trim(),
               password
             });
             tokenStorage.set(access_token);
