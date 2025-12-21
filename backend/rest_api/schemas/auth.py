@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class RegisterRequest(BaseModel):
@@ -12,7 +12,9 @@ class RegisterResponse(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    username: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    username: str = Field(validation_alias=AliasChoices("username", "login"))
     password: str
 
 
