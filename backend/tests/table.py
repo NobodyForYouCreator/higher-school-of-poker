@@ -1,14 +1,6 @@
-from __future__ import annotations
-
-from dataclasses import dataclass
+from pathlib import Path
 from random import randint
 
-<<<<<<< HEAD
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
-
-from backend.poker_engine.table import Table
-=======
 from fastapi import APIRouter, Request, Query, HTTPException, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -18,79 +10,70 @@ from backend.poker_engine.game_state import PlayerAction
 from backend.database.session import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.services.game_service import GameService
->>>>>>> 51f645ea101a1b57d6fb69bef06dcd66e9c727ad
 
 router = APIRouter(tags=["table"])
 
-
-class TableCreateRequest(BaseModel):
-    max_players: int = Field(ge=2, le=9)
-    buy_in: int = Field(ge=0)
-    private: bool = False
+templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
+tables_dict: dict[int, Table] = {}
 
 game_service = GameService()
 
 
-@dataclass(slots=True)
-class TableRecord:
-    table: Table
-    buy_in: int
-    private: bool
-
-
-tables_dict: dict[int, TableRecord] = {}
-
-
-def _serialize_summary(table_id: int, record: TableRecord) -> dict:
-    return {
-        "id": str(table_id),
-        "max_players": record.table.max_players,
-        "buy_in": record.buy_in,
-        "private": record.private,
-        "players_count": len(record.table.players),
-        "spectators_count": len(record.table.spectators),
-    }
-
-
-@router.get("/tables")
-def list_tables() -> list[dict]:
-    return [_serialize_summary(table_id, record) for table_id, record in tables_dict.items()]
+@router.get("/tables", response_class=HTMLResponse)
+def tables(request: Request, format: str | None = Query(default=None)):
+    table_entries = [_serialize_table(table) for table in tables_dict.values()]
+    accepts = request.headers.get("accept", "")
+    wants_json = format == "json" or "application/json" in accepts
+    if wants_json:
+        return {"status": 200, "tables": table_entries}
+    return templates.TemplateResponse(
+        "tables.html",
+        {"request": request, "tables": table_entries},
+    )
 
 
 @router.post("/tables/create")
-<<<<<<< HEAD
-def create_table(payload: TableCreateRequest) -> dict:
-    table_id = randint(0, 100_000)
-    while table_id in tables_dict:
-        table_id = randint(0, 100_000)
-=======
 def create_table():
     table_ind = randint(0, 100_000)
->>>>>>> 51f645ea101a1b57d6fb69bef06dcd66e9c727ad
 
-    table = Table(table_id=table_id, max_players=payload.max_players)
-    tables_dict[table_id] = TableRecord(table=table, buy_in=payload.buy_in, private=payload.private)
-    return _serialize_summary(table_id, tables_dict[table_id])
+    tables_dict[table_ind] = Table(table_id=table_ind)
+    return {"status": 200, "added": table_ind}
 
 
-@router.get("/tables/{table_id}")
-def get_table_info(table_id: int) -> dict:
-    record = tables_dict.get(table_id)
-    if record is None:
+@router.get("/tables/{table_id}", response_class=HTMLResponse)
+def get_table_info(request: Request, table_id: int):
+    table = tables_dict.get(table_id)
+    if table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-
-    info = _serialize_summary(table_id, record)
-    info["seats"] = [
+    data = _serialize_table(table)
+    current_bet_value = table.game_state.current_bet if table.game_state else 0
+    data.update(
         {
-            "position": player.position,
-            "user_id": player.user_id,
-            "stack": player.stack,
-            "is_spectator": False,
+            "players_list": [
+                {
+                    "user_id": player.user_id,
+                    "stack": player.stack,
+                    "status": player.status.value,
+                    "position": player.position,
+                    "bet": player.bet,
+                    "bet_percent": int(player.bet / current_bet_value * 100) if current_bet_value else 0,
+                }
+                for player in table.players
+            ],
+            "spectators_list": [
+                {
+                    "user_id": spectator.user_id,
+                    "status": spectator.status.value,
+                }
+                for spectator in table.spectators
+            ],
+            "pot": table.game_state.pot if table.game_state else 0,
+            "phase": table.game_state.phase.value if table.game_state else "waiting",
+            "board": [
+                str(card) for card in (table.game_state.board if table.game_state else [])
+            ],
+            "current_bet": current_bet_value,
         }
-<<<<<<< HEAD
-        for player in record.table.players
-    ] + [
-=======
     )
     return templates.TemplateResponse(
         "table_detail.html",
@@ -244,58 +227,59 @@ def _build_game_snapshot(table: Table) -> dict:
             }
         )
     spectators = [
->>>>>>> 51f645ea101a1b57d6fb69bef06dcd66e9c727ad
         {
-            "position": -1,
             "user_id": spectator.user_id,
-            "stack": spectator.stack,
-            "is_spectator": True,
+            "status": spectator.status.value,
         }
-        for spectator in record.table.spectators
+        for spectator in table.spectators
     ]
-    return info
+    return {
+        "table_id": table.table_id,
+        "phase": game.phase.value if game else "waiting",
+        "pot": game.pot if game else 0,
+        "board": board,
+        "players": players,
+        "spectators": spectators,
+        "current_player_id": current_player_id,
+        "current_bet": current_bet,
+        "small_blind": table.small_blind,
+        "big_blind": table.big_blind,
+        "max_players": table.max_players,
+    }
 
 
-def _current_user_id(request: Request) -> int:
-    user_id = getattr(request.state, "user_id", None)
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return int(user_id)
+def _available_actions() -> list[dict]:
+    return [
+        {"value": PlayerAction.CHECK.value, "label": "Check"},
+        {"value": PlayerAction.CALL.value, "label": "Call"},
+        {"value": PlayerAction.BET.value, "label": "Bet"},
+        {"value": PlayerAction.RAISE.value, "label": "Raise"},
+        {"value": PlayerAction.FOLD.value, "label": "Fold"},
+        {"value": PlayerAction.ALL_IN.value, "label": "All-in"},
+    ]
 
 
-@router.post("/tables/{table_id}/join")
-def join_table(request: Request, table_id: int) -> dict:
-    record = tables_dict.get(table_id)
-    if record is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-
-    user_id = _current_user_id(request)
-    already_in = any(p.user_id == user_id for p in record.table.players)
-    if not already_in:
-        record.table.seat_player(user_id, record.buy_in)
-    return {"ok": True}
-
-
-@router.post("/tables/{table_id}/leave")
-def leave_table(request: Request, table_id: int) -> dict:
-    record = tables_dict.get(table_id)
-    if record is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-
-    user_id = _current_user_id(request)
-    record.table.leave(user_id)
-    return {"ok": True}
-
-
-@router.post("/tables/{table_id}/spectate")
-def spectate_table(request: Request, table_id: int) -> dict:
-    record = tables_dict.get(table_id)
-    if record is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-
-    user_id = _current_user_id(request)
-    already_in = any(p.user_id == user_id for p in record.table.spectators)
-    if not already_in:
-        record.table.seat_player(user_id, record.buy_in, is_spectator=True)
-    return {"ok": True}
-
+def _result_context(request: Request, table: Table) -> dict:
+    game = table.game_state
+    winners = []
+    winning_hand = None
+    if game:
+        winners = [
+            {
+                "user_id": player.user_id,
+                "stack": player.stack,
+            }
+            for player in game.winners
+        ]
+        if game.best_hand:
+            winning_hand = {
+                "rank": game.best_hand.rank.name,
+                "cards": [str(card) for card in game.best_hand.cards],
+            }
+    return {
+        "request": request,
+        "table_id": table.table_id,
+        "winners": winners,
+        "winning_hand": winning_hand,
+        "board": [str(card) for card in (game.board if game else [])],
+    }
