@@ -67,22 +67,26 @@ def main():
     game = table.start_game()
     describe_state(game)
 
+
     while game.hand_active:
-        action = input()
-        if action == "RAISE":
-            num = int(input())
-            auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.RAISE, num)
-        elif action == "BET":
-            num = int(input())
-            auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.BET, num)
-        elif action == "CALL":
-            auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.CALL)
-        elif action == "CHECK":
-            auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.CHECK)
-        elif action == "FOLD":
-            auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.FOLD)
-        elif action == "ALL_IN":
-            auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.ALL_IN)
+        try:
+            action = input()
+            if action == "RAISE":
+                num = int(input())
+                auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.RAISE, num)
+            elif action == "BET":
+                num = int(input())
+                auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.BET, num)
+            elif action == "CALL":
+                auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.CALL)
+            elif action == "CHECK":
+                auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.CHECK)
+            elif action == "FOLD":
+                auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.FOLD)
+            elif action == "ALL_IN":
+                auto_action(table, table.players[game.current_player_index].user_id, PlayerAction.ALL_IN)
+        except Exception as ex:
+            print(ex)
     if not game.hand_active:
         winners = ", ".join(str(p.user_id) for p in game.winners)
         print(f"\n*** Раздача завершена. Победители: {winners}")
