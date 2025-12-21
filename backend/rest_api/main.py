@@ -24,4 +24,4 @@ async def jwt_middleware_app(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
-    return await jwt_middleware(request, call_next) 
+    return await jwt_middleware(request, call_next)
