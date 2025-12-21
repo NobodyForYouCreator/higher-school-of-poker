@@ -6,7 +6,7 @@ from typing import Awaitable, Callable
 import jwt
 from fastapi import Request, Response
 
-from config import settings
+from backend.rest_api.core.config import settings
 
 PUBLIC_PATHS: set[str] = {
     "/auth/register",

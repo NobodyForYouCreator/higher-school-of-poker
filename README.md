@@ -127,6 +127,9 @@
 
 ## Backend
 
+-### Запуск (локально)
+    - из корня репозитория: `poetry install` затем `poetry run uvicorn backend.rest_api.main:app --reload --host 0.0.0.0 --port 8000`
+
 - ### Docker
 
     - uvicorn
