@@ -9,7 +9,7 @@ from backend.rest_api.core.config import (
 
 def create_access_token(user_id: int) -> str:
     payload = {
-        "user": str(user_id),
+        "sub": str(user_id),
         "exp": datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRES_MINUTES)
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
