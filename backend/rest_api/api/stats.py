@@ -37,12 +37,20 @@ async def _get_player_stats(db: AsyncSession, user_id: int) -> Dict[str, Any]:
     }
 
 
-async def _get_player_history(db: AsyncSession, user_id: int) -> List[Dict[str, Any]]:
+async def _get_player_history(
+    db: AsyncSession,
+    user_id: int,
+    *,
+    limit: int,
+    offset: int,
+) -> List[Dict[str, Any]]:
     query = (
         select(PlayerGame)
         .options(selectinload(PlayerGame.game))
         .where(PlayerGame.user_id == user_id)
         .order_by(PlayerGame.id.desc())
+        .limit(limit)
+        .offset(offset)
     )
     result = await db.execute(query)
     games: List[PlayerGame] = result.scalars().all()
@@ -75,9 +83,14 @@ async def get_my_stats(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
 
 
 @router.get("/stats/me/history")
-async def get_my_history(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+async def get_my_history(
+    *,
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
     user_id = 1
-    history = await _get_player_history(db, user_id)
+    history = await _get_player_history(db, user_id, limit=limit, offset=offset)
     return {"status": 200, "history": history}
 
 
@@ -90,8 +103,18 @@ async def get_user_stats(user_id: int, db: AsyncSession = Depends(get_db)) -> Di
 
 
 @router.get("/stats/{user_id}/history")
-async def get_user_history(user_id: int, db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+async def get_user_history(
+    user_id: int,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
     if user_id <= 0:
         raise HTTPException(status_code=400, detail="user_id должен быть положительным")
-    history = await _get_player_history(db, user_id)
+    if limit <= 0:
+        raise HTTPException(status_code=400, detail="limit должен быть положительным")
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="offset не может быть отрицательным")
+    history = await _get_player_history(db, user_id, limit=limit, offset=offset)
     return {"status": 200, "history": history}

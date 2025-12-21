@@ -21,7 +21,18 @@ class GameService:
         table.start_game()
 
     async def apply_action(self, table: Table, user_id: int, action: PlayerAction, amount: int, db: AsyncSession) -> None:
+        """Apply a player's action to the current hand and record results on completion.
+
+        The underlying Table API expects a ``user_id`` rather than a ``PlayerState``
+        instance, so this method forwards the ID directly. Once the action
+        concludes a hand (``hand_active`` becomes False), the finished hand and
+        per‑player game records are persisted to the database and aggregated
+        stats are updated via ``_record_finished_hand``.
+        """
+        # Delegate the action to the Table. Table.apply_action will raise
+        # if the user is not seated or if the game hasn't started.
         table.apply_action(user_id, action, amount)
+        # If the hand has concluded, persist the finished game and update stats.
         if not table.game_state.hand_active:
             await self._record_finished_hand(table, db)
 
@@ -32,9 +43,12 @@ class GameService:
             return
         winner_ids: List[int] = [p.user_id for p in (game_state.winners or [])]
         board_str = [str(card) for card in game_state.board]
+        # Persist the finished game with the actual pot from the game state rather than a
+        # placeholder.  This allows historical queries to reflect the true amount of
+        # chips wagered during the hand.
         finished_game = FinishedGame(
             table_id=table.table_id,
-            pot=0,
+            pot=game_state.pot,
             board=board_str,
             winners=winner_ids,
         )
@@ -66,6 +80,5 @@ class GameService:
                 net_stack_delta=net_delta,
                 resulting_balance=p.stack,
             )
-
             update_stats(existing, [delta])
         await db.commit()
