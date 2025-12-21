@@ -1,84 +1,47 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Awaitable, Callable
 
-import jwt
 from fastapi import Request, Response
+from jose import JWTError
 
+from backend.auth.jwt_tokens import decode_access_token
 from backend.rest_api.core.config import settings
 
+AUTH_HEADER_PREFIX = "Bearer "
+
+_API_PREFIX = settings.api_prefix.rstrip("/") or ""
+
 PUBLIC_PATHS: set[str] = {
-    "/auth/register",
-    "/auth/login",
+    f"{_API_PREFIX}/auth/register",
+    f"{_API_PREFIX}/auth/login",
+    f"{_API_PREFIX}/health",
     "/docs",
     "/openapi.json",
 }
-
-AUTH_HEADER_PREFIX = "Bearer "
 
 
 async def jwt_middleware(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
+    # Let CORS preflight requests through without auth.
+    if request.method.upper() == "OPTIONS":
+        return await call_next(request)
+
     if request.url.path in PUBLIC_PATHS:
         return await call_next(request)
 
     auth_header: str | None = request.headers.get("Authorization")
-
     if not auth_header or not auth_header.startswith(AUTH_HEADER_PREFIX):
-        return Response(
-            content="Missing or invalid authorization header",
-            status_code=401,
-        )
+        return Response(content="Missing or invalid authorization header", status_code=401)
 
-    token = auth_header[len(AUTH_HEADER_PREFIX):]
+    token = auth_header[len(AUTH_HEADER_PREFIX) :]
 
     try:
-        payload: dict[str, object] = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=["HS256"],
-        )
+        user_id = decode_access_token(token)
+    except JWTError:
+        return Response(content="Invalid or expired token", status_code=401)
 
-        username = payload.get("sub")
-        exp = payload.get("exp")
-
-        if username is None or exp is None:
-            return Response(
-                content="Invalid or expired token",
-                status_code=401,
-            )
-
-        now = datetime.utcnow()
-
-        if isinstance(exp, (int, float)):
-            exp = datetime.utcfromtimestamp(exp)
-
-        elif isinstance(exp, datetime):
-            if exp.tzinfo is not None:
-                exp = exp.astimezone().replace(tzinfo=None)
-
-        else:
-            return Response(
-                content="Invalid or expired token",
-                status_code=401,
-            )
-
-        if exp <= now:
-            return Response(
-                content="Invalid or expired token",
-                status_code=401,
-            )
-
-        request.state.username = username
-        request.state.exp = exp
-
-    except jwt.InvalidTokenError:
-        return Response(
-            content="Invalid or expired token",
-            status_code=401,
-        )
-
+    request.state.user_id = user_id
     return await call_next(request)

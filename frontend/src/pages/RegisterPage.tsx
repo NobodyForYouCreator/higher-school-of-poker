@@ -8,7 +8,6 @@ export function RegisterPage() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,18 +56,6 @@ export function RegisterPage() {
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-sm text-slate-300">Email</span>
-          <input
-            className="rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2 outline-none focus:border-slate-600"
-            name="email"
-            placeholder="email@example.com"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1">
           <span className="text-sm text-slate-300">Пароль</span>
           <input
             className="rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2 outline-none focus:border-slate-600"
@@ -85,7 +72,6 @@ export function RegisterPage() {
           disabled={
             isSubmitting ||
             username.trim().length === 0 ||
-            email.trim().length === 0 ||
             password.length === 0
           }
           type="submit"

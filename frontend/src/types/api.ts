@@ -6,7 +6,7 @@ export type JwtTokenResponse = {
 export type User = {
   id: number;
   username: string;
-  email: string;
+  email?: string;
   balance?: number;
   created_at?: string;
 };
@@ -52,4 +52,3 @@ export type HandHistoryItem = {
   result?: "win" | "loss" | "split" | string;
   pot?: number;
 };
-

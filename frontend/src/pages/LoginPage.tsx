@@ -34,7 +34,7 @@ export function LoginPage() {
 
           try {
             const { access_token } = await authApi.login({
-              login: login.trim(),
+              username: login.trim(),
               password
             });
             tokenStorage.set(access_token);
@@ -51,11 +51,11 @@ export function LoginPage() {
         }}
       >
         <label className="flex flex-col gap-1">
-          <span className="text-sm text-slate-300">Email или логин</span>
+          <span className="text-sm text-slate-300">Логин</span>
           <input
             className="rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2 outline-none focus:border-slate-600"
             name="login"
-            placeholder="email@example.com"
+            placeholder="nikita"
             value={login}
             onChange={(e) => setLogin(e.target.value)}
           />

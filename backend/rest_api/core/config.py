@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Higher School of Poker"
     api_prefix: str = "/api"
-    cors_origins: str = ""
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     database_url: str = "postgresql+asyncpg://postgres:postgres@db:5432/poker"
 
     def cors_list(self) -> list[str]:

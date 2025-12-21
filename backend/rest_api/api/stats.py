@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any, Dict, List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 
 router = APIRouter(tags=["stats"])
@@ -25,15 +25,15 @@ def _placeholder_history(user_id: int) -> List[Dict[str, Any]]:
 
 
 @router.get("/stats/me/stats")
-def get_my_stats() -> Dict[str, Any]:
-    fake_me_user_id = 1
-    return {"status": 200, "stats": _placeholder_stats(fake_me_user_id)}
+def get_my_stats(request: Request) -> Dict[str, Any]:
+    user_id = getattr(request.state, "user_id", 1)
+    return _placeholder_stats(int(user_id))
 
 
 @router.get("/stats/me/history")
-def get_my_history() -> Dict[str, Any]:
-    fake_me_user_id = 1
-    return {"status": 200, "history": _placeholder_history(fake_me_user_id)}
+def get_my_history(request: Request) -> List[Dict[str, Any]]:
+    user_id = getattr(request.state, "user_id", 1)
+    return _placeholder_history(int(user_id))
 
 
 @router.get("/stats/{user_id}/stats")
@@ -41,12 +41,12 @@ def get_user_stats(user_id: int) -> Dict[str, Any]:
     """Статистика пользователя по user_id."""
     if user_id <= 0:
         raise HTTPException(status_code=400, detail="user_id должен быть положительным")
-    return {"status": 200, "stats": _placeholder_stats(user_id)}
+    return _placeholder_stats(user_id)
 
 
 @router.get("/stats/{user_id}/history")
-def get_user_history(user_id: int) -> Dict[str, Any]:
+def get_user_history(user_id: int) -> List[Dict[str, Any]]:
     """История раздач пользователя по user_id."""
     if user_id <= 0:
         raise HTTPException(status_code=400, detail="user_id должен быть положительным")
-    return {"status": 200, "history": _placeholder_history(user_id)}
+    return _placeholder_history(user_id)

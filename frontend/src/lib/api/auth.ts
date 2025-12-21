@@ -2,7 +2,7 @@ import type { JwtTokenResponse, User } from "../../types/api";
 import { apiGet, apiPost } from "./client";
 
 export type LoginRequest = {
-  login: string;
+  username: string;
   password: string;
 };
 
@@ -22,4 +22,3 @@ export const authApi = {
     return apiGet<User>("/auth/me");
   }
 };
-

@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
+from typing import Union
 from jose import jwt, JWTError
 from backend.rest_api.core import config
 
 ALGORITHM = "HS256"
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(user_id: Union[int, str]) -> str:
     now = datetime.now(timezone.utc)
     exp = now + timedelta(minutes=config.JWT_EXPIRES_MINUTES)
 
