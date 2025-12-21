@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Awaitable, Callable
 
-import jwt
 from fastapi import Request, Response
+from jose import JWTError
+from starlette.responses import JSONResponse
 
-from backend.rest_api.core.config import settings
+from backend.auth.jwt_tokens import decode_access_token
 
 PUBLIC_PATHS: set[str] = {
     "/auth/register",
     "/auth/login",
     "/docs",
     "/openapi.json",
+    "/redoc",
 }
 
 AUTH_HEADER_PREFIX = "Bearer "
@@ -28,56 +29,19 @@ async def jwt_middleware(
     auth_header: str | None = request.headers.get("Authorization")
 
     if not auth_header or not auth_header.startswith(AUTH_HEADER_PREFIX):
-        return Response(
-            content="Missing or invalid authorization header",
+        return JSONResponse(
+            {"detail": "Missing or invalid authorization header"},
             status_code=401,
         )
 
-    token = auth_header[len(AUTH_HEADER_PREFIX):]
+    token = auth_header[len(AUTH_HEADER_PREFIX):].strip()
 
     try:
-        payload: dict[str, object] = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=["HS256"],
-        )
-
-        username = payload.get("sub")
-        exp = payload.get("exp")
-
-        if username is None or exp is None:
-            return Response(
-                content="Invalid or expired token",
-                status_code=401,
-            )
-
-        now = datetime.utcnow()
-
-        if isinstance(exp, (int, float)):
-            exp = datetime.utcfromtimestamp(exp)
-
-        elif isinstance(exp, datetime):
-            if exp.tzinfo is not None:
-                exp = exp.astimezone().replace(tzinfo=None)
-
-        else:
-            return Response(
-                content="Invalid or expired token",
-                status_code=401,
-            )
-
-        if exp <= now:
-            return Response(
-                content="Invalid or expired token",
-                status_code=401,
-            )
-
-        request.state.username = username
-        request.state.exp = exp
-
-    except jwt.InvalidTokenError:
-        return Response(
-            content="Invalid or expired token",
+        user_id = decode_access_token(token)
+        request.state.user_id = user_id
+    except JWTError:
+        return JSONResponse(
+            {"detail": "Invalid or expired token"},
             status_code=401,
         )
 
