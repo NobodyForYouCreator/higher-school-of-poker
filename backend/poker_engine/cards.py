@@ -128,7 +128,6 @@ class HandEvaluator:
             evaluations.append((player, evaluation))
         if not evaluations:
             return [], HandEvaluation(HandRank.HIGH_CARD, (), tuple())
-        # Find best score
         _, best_eval = max(evaluations, key=lambda item: item[1])
         winners = [
             player for player, evaluation in evaluations if evaluation == best_eval
@@ -193,7 +192,6 @@ class HandEvaluator:
     @staticmethod
     def _detect_straight(values: Sequence[int]) -> tuple[bool, int]:
         unique_values = sorted(set(values), reverse=True)
-        # Handle wheel straight (A2345)
         if 14 in unique_values:
             unique_values.append(1)
         consecutive = 1

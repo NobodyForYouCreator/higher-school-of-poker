@@ -148,12 +148,37 @@ class GameState:
                     self.last_raiser_index = player_index
                     self._reset_round_actions(except_index=player_index)
                 else:
-                    # Shove that does not meet minimum raise still forces others to respond.
                     self._mark_players_need_to_call(except_index=player_index)
         else:
             raise ValueError(f"Unsupported action {action}")
 
         self._advance_turn()
+
+    def force_fold(self, player: PlayerState) -> None:
+        if not self.hand_active:
+            return
+        try:
+            player_index = self.players.index(player)
+        except ValueError as exc:
+            raise RuntimeError("Player not seated at this table.") from exc
+
+        if player.status not in (PlayerStatus.ACTIVE, PlayerStatus.ALL_IN):
+            return
+
+        player.fold()
+        player.has_acted_in_round = True
+
+        if len(self._players_still_in_hand()) <= 1:
+            self._finish_with_single_player()
+            return
+
+        if self.current_player_index == player_index:
+            self._advance_turn()
+            return
+
+        if self._is_round_complete():
+            self.current_player_index = None
+            self.advance_phase()
 
     def advance_phase(self) -> None:
         """Move to the next phase once betting is complete."""
@@ -188,12 +213,10 @@ class GameState:
 
             if self.current_player_index is not None:
                 return
-            # No players can act (all-in or folded). Proceed to next phase automatically.
             if self.phase in (GamePhase.SHOWDOWN, GamePhase.FINISHED):
                 return
             continue
 
-    # --- Helpers -----------------------------------------------------------------
 
     def _prepare_new_hand(self) -> None:
         self.deck.reset()
@@ -232,7 +255,6 @@ class GameState:
                 player.hole_cards.append(self.deck.draw_card())
 
     def _deal_board_cards(self, amount: int) -> None:
-        # Simulate burn
         self.deck.draw_card()
         self.board.extend(self.deck.draw_many_cards(amount))
 
