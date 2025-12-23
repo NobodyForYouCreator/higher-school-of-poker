@@ -7,17 +7,60 @@ on:
 jobs:
   unit:
     runs-on: self-hosted
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Debug runner
+        shell: bash
+        run: |
+          set -euxo pipefail
+          uname -a
+          id
+          pwd
+          ls -la
+          which python || true
+          which python3 || true
+          python --version || true
+          python3 --version || true
 
-      - name: Install Poetry
-        run: pip install poetry
+      # Выбираем интерпретатор. Приоритет – python3.12.
+      - name: Select Python
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if command -v python3.12 >/dev/null 2>&1; then
+            echo "PYTHON=python3.12" >> "$GITHUB_ENV"
+          elif command -v python3 >/dev/null 2>&1; then
+            echo "PYTHON=python3" >> "$GITHUB_ENV"
+          else
+            echo "No python3 found on self-hosted runner. Install Python 3.12 (recommended) and retry." >&2
+            exit 1
+          fi
 
-      - name: Cache Poetry + venv
+      - name: Ensure pip + pipx
+        shell: bash
+        run: |
+          set -euxo pipefail
+          $PYTHON -m ensurepip --upgrade || true
+          $PYTHON -m pip install --upgrade pip
+          $PYTHON -m pip install --upgrade pipx
+          $PYTHON -m pipx ensurepath || true
+
+      - name: Install Poetry (pipx)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          # ставим (или обновляем) poetry изолированно
+          if command -v poetry >/dev/null 2>&1; then
+            poetry --version
+          else
+            pipx install poetry
+          fi
+          poetry --version
+
+      - name: Cache Poetry + pip + venv
         uses: actions/cache@v4
         with:
           path: |
@@ -27,9 +70,15 @@ jobs:
           key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
 
       - name: Install deps
+        shell: bash
         run: |
+          set -euxo pipefail
           poetry config virtualenvs.in-project true
+          poetry env use "$PYTHON"
           poetry install --no-interaction
 
       - name: Run tests
-        run: poetry run pytest -q ./backend
+        shell: bash
+        run: |
+          set -euxo pipefail
+          poetry run pytest -q ./backend
