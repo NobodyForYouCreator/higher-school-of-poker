@@ -46,6 +46,13 @@ class StatsDelta:
 
 
 def update_stats(current: PlayerStats, deltas: Iterable[StatsDelta]) -> PlayerStats:
+    current.hands_won = int(current.hands_won or 0)
+    current.hands_lost = int(current.hands_lost or 0)
+    current.max_balance = int(current.max_balance or 0)
+    current.max_bet = int(current.max_bet or 0)
+    current.lost_stack = int(current.lost_stack or 0)
+    current.won_stack = int(current.won_stack or 0)
+
     for d in deltas:
         if d.user_id != current.user_id:
             continue

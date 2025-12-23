@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import List
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database.base import Base
+
+if TYPE_CHECKING:
+    from backend.models.player_game import PlayerGame
 
 
 class FinishedGame(Base):
@@ -17,11 +20,11 @@ class FinishedGame(Base):
 
     pot: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
 
-    board: Mapped[List[str]] = mapped_column(ARRAY(String), nullable=False)
+    board: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
 
-    winners: Mapped[List[int]] = mapped_column(ARRAY(Integer), nullable=False, default=list)
+    winners: Mapped[list[int]] = mapped_column(ARRAY(Integer), nullable=False, default=list)
 
-    players: Mapped[List["PlayerGame"]] = relationship(
+    players: Mapped[list[PlayerGame]] = relationship(
         "PlayerGame",
         back_populates="game",
         cascade="all, delete-orphan",

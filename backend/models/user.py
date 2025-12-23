@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Integer, String, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.database.base import Base
 
@@ -14,7 +14,7 @@ class User(Base):
 
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
 
-
+    balance: Mapped[int] = mapped_column(BigInteger, nullable=False, default=5000, server_default="5000")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database.base import Base
+
+if TYPE_CHECKING:
+    from backend.models.finished_game import FinishedGame
+    from backend.models.user import User
 
 
 class PlayerGame(Base):
@@ -24,7 +28,7 @@ class PlayerGame(Base):
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
 
-    hole_cards: Mapped[List[str]] = mapped_column(ARRAY(String), nullable=False)
+    hole_cards: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
 
     bet: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
 
@@ -34,9 +38,9 @@ class PlayerGame(Base):
 
     won_hand: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    game: Mapped["FinishedGame"] = relationship(
+    game: Mapped[FinishedGame] = relationship(
         "FinishedGame",
         back_populates="players",
     )
 
-    user: Mapped["User"] = relationship("User")
+    user: Mapped[User] = relationship("User")
