@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi import status
+from backend.rest_api.errors import http_error
 
 from backend.database.session import get_db
 from backend.rest_api.api.deps import get_current_user_id, get_table_service
@@ -33,7 +35,7 @@ def get_table_info(
     try:
         return service.get_table_info(table_id)
     except TableNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise http_error(status.HTTP_404_NOT_FOUND, code="table_not_found", message="Table not found") from exc
 
 
 @router.post("/{table_id}/join", response_model=OkResponse)
@@ -46,11 +48,11 @@ async def join_table(
     try:
         return await service.join_table(table_id, user_id=user_id, db=db)
     except TableNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise http_error(status.HTTP_404_NOT_FOUND, code="table_not_found", message="Table not found") from exc
     except UserNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise http_error(status.HTTP_404_NOT_FOUND, code="user_not_found", message="User not found") from exc
     except InsufficientBalanceError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise http_error(status.HTTP_400_BAD_REQUEST, code="insufficient_balance", message="Not enough balance for buy-in") from exc
 
 
 @router.post("/{table_id}/leave", response_model=OkResponse)
@@ -63,9 +65,9 @@ async def leave_table(
     try:
         return await service.leave_table(table_id, user_id=user_id, db=db)
     except TableNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise http_error(status.HTTP_404_NOT_FOUND, code="table_not_found", message="Table not found") from exc
     except UserNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise http_error(status.HTTP_404_NOT_FOUND, code="user_not_found", message="User not found") from exc
 
 
 @router.post("/{table_id}/spectate", response_model=OkResponse)
@@ -78,6 +80,6 @@ async def spectate_table(
     try:
         return await service.spectate_table(table_id, user_id=user_id, db=db)
     except TableNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise http_error(status.HTTP_404_NOT_FOUND, code="table_not_found", message="Table not found") from exc
     except UserNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise http_error(status.HTTP_404_NOT_FOUND, code="user_not_found", message="User not found") from exc

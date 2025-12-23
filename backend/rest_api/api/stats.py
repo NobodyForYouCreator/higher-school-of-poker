@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
+from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +10,7 @@ from backend.database.session import get_db
 from backend.models.player_stats import PlayerStats
 from backend.models.player_game import PlayerGame
 from backend.rest_api.api.deps import get_current_user_id
+from backend.rest_api.errors import http_error
 from backend.rest_api.schemas.stats import PlayerHistoryEntry, PlayerStatsOut
 
 
@@ -92,7 +94,7 @@ async def get_my_history(
 @router.get("/{user_id}/stats", response_model=PlayerStatsOut)
 async def get_user_stats(user_id: int, db: AsyncSession = Depends(get_db)) -> PlayerStatsOut:
     if user_id <= 0:
-        raise HTTPException(status_code=400, detail="user_id должен быть положительным")
+        raise http_error(status.HTTP_400_BAD_REQUEST, code="invalid_user_id", message="user_id должен быть положительным")
     return await _get_player_stats(db, user_id)
 
 
@@ -105,5 +107,5 @@ async def get_user_history(
     db: AsyncSession = Depends(get_db),
 ) -> list[PlayerHistoryEntry]:
     if user_id <= 0:
-        raise HTTPException(status_code=400, detail="user_id должен быть положительным")
+        raise http_error(status.HTTP_400_BAD_REQUEST, code="invalid_user_id", message="user_id должен быть положительным")
     return await _get_player_history(db, user_id, limit=limit, offset=offset)

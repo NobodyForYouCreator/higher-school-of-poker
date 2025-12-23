@@ -19,6 +19,9 @@ router = APIRouter(tags=["ws"])
 
 _game_service = GameService()
 
+def _ws_error(code: str, message: str) -> dict[str, Any]:
+    return {"type": "error", "code": code, "message": message}
+
 
 @dataclass(slots=True)
 class _Conn:
@@ -142,7 +145,7 @@ async def _broadcast_state(table_id: int) -> None:
 
     record = table_store.get(table_id)
     if record is None:
-        message = {"type": "error", "message": "Table not found"}
+        message = _ws_error("table_not_found", "Table not found")
         for conn in conns:
             ok = await _try_send(conn, message)
             if not ok:
@@ -158,7 +161,7 @@ async def _broadcast_state(table_id: int) -> None:
             if not ok:
                 dead_sockets.append(conn.websocket)
         except Exception as exc:
-            ok = await _try_send(conn, {"type": "error", "message": str(exc)})
+            ok = await _try_send(conn, _ws_error("broadcast_failed", str(exc)))
             if not ok:
                 dead_sockets.append(conn.websocket)
 
@@ -281,26 +284,26 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
 
     token = websocket.query_params.get("token")
     if not token:
-        await websocket.send_text(json.dumps({"type": "error", "message": "Missing token"}))
+        await websocket.send_text(json.dumps(_ws_error("missing_token", "Missing token")))
         await websocket.close(code=1008)
         return
 
     try:
         user_id = decode_access_token(token)
     except Exception:
-        await websocket.send_text(json.dumps({"type": "error", "message": "Invalid token"}))
+        await websocket.send_text(json.dumps(_ws_error("invalid_token", "Invalid token")))
         await websocket.close(code=1008)
         return
 
     try:
         table_id_int = int(table_id)
     except ValueError:
-        await websocket.send_text(json.dumps({"type": "error", "message": "Invalid table_id"}))
+        await websocket.send_text(json.dumps(_ws_error("invalid_table_id", "Invalid table_id")))
         await websocket.close(code=1008)
         return
 
     if table_store.get(table_id_int) is None:
-        await websocket.send_text(json.dumps({"type": "error", "message": "Table not found"}))
+        await websocket.send_text(json.dumps(_ws_error("table_not_found", "Table not found")))
         await websocket.close(code=1008)
         return
 
@@ -318,7 +321,7 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
             try:
                 msg = json.loads(raw)
             except json.JSONDecodeError:
-                await websocket.send_text(json.dumps({"type": "error", "message": "Invalid JSON"}))
+                await websocket.send_text(json.dumps(_ws_error("invalid_json", "Invalid JSON")))
                 continue
 
             msg_type = msg.get("type")
@@ -327,7 +330,7 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
             async with lock:
                 record = table_store.get(table_id_int)
                 if record is None:
-                    await websocket.send_text(json.dumps({"type": "error", "message": "Table not found"}))
+                    await websocket.send_text(json.dumps(_ws_error("table_not_found", "Table not found")))
                     continue
 
                 table = record.table
@@ -336,7 +339,7 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
                     is_spectator = any(s.user_id == user_id for s in table.spectators)
                     if not is_spectator:
                         await websocket.send_text(
-                            json.dumps({"type": "error", "message": "Show cards is available to spectators only"})
+                            json.dumps(_ws_error("spectator_only", "Show cards is available to spectators only"))
                         )
                         continue
                     conn.show_all = bool(payload.get("show", False))
@@ -344,7 +347,7 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
                     continue
 
                 if msg_type != "player_action":
-                    await websocket.send_text(json.dumps({"type": "error", "message": "Unknown message type"}))
+                    await websocket.send_text(json.dumps(_ws_error("unknown_message_type", "Unknown message type")))
                     continue
 
                 action_str = payload.get("action")
@@ -352,16 +355,16 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
 
                 is_spectator = any(s.user_id == user_id for s in table.spectators)
                 if is_spectator:
-                    await websocket.send_text(json.dumps({"type": "error", "message": "Spectators cannot act"}))
+                    await websocket.send_text(json.dumps(_ws_error("spectator_cannot_act", "Spectators cannot act")))
                     continue
 
                 is_seated = any(p.user_id == user_id for p in table.public_players())
                 if not is_seated:
-                    await websocket.send_text(json.dumps({"type": "error", "message": "Player is not seated at this table"}))
+                    await websocket.send_text(json.dumps(_ws_error("player_not_seated", "Player is not seated at this table")))
                     continue
 
                 if not isinstance(action_str, str):
-                    await websocket.send_text(json.dumps({"type": "error", "message": "Missing action"}))
+                    await websocket.send_text(json.dumps(_ws_error("missing_action", "Missing action")))
                     continue
 
                 if table.game_state is None or not getattr(table.game_state, "hand_active", False):
@@ -369,20 +372,20 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
                     try:
                         await _game_service.start_hand(table)
                     except Exception as exc:
-                        await websocket.send_text(json.dumps({"type": "error", "message": str(exc)}))
+                        await websocket.send_text(json.dumps(_ws_error("start_hand_failed", str(exc))))
                         continue
 
                 try:
                     player_action = PlayerAction(action_str)
                 except ValueError:
-                    await websocket.send_text(json.dumps({"type": "error", "message": "Invalid action"}))
+                    await websocket.send_text(json.dumps(_ws_error("invalid_action", "Invalid action")))
                     continue
 
                 try:
                     async with SessionLocal() as session:
                         await _game_service.apply_action(table, user_id, player_action, int(amount), session)
                 except Exception as exc:
-                    await websocket.send_text(json.dumps({"type": "error", "message": str(exc)}))
+                    await websocket.send_text(json.dumps(_ws_error("action_failed", str(exc))))
                     continue
 
                 await _broadcast_state(table_id_int)

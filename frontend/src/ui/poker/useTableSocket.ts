@@ -71,8 +71,10 @@ export function useTableSocket(tableId: string | null, token: string | null) {
         const msgAny = msg as any;
         if (msgAny?.type === "table_state" && msgAny?.payload) {
           setState(msgAny.payload as TableState);
-        } else if (msgAny?.type === "error" && typeof msgAny?.message === "string") {
-          setLastError(msgAny.message);
+        } else if (msgAny?.type === "error") {
+          const message = typeof msgAny?.message === "string" ? msgAny.message : "WebSocket error";
+          const code = typeof msgAny?.code === "string" ? msgAny.code : null;
+          setLastError(code ? `${code}: ${message}` : message);
         }
       } catch {
         // ignore

@@ -42,5 +42,5 @@ export type TableState = {
 
 export type WsEnvelope =
   | { type: "table_state"; payload: TableState }
-  | { type: "error"; message: string }
+  | { type: "error"; code?: string; message: string }
   | { type: string; [k: string]: unknown };

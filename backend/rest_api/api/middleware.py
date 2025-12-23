@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import Awaitable, Callable
 
 from fastapi import Request, Response
+from fastapi.responses import JSONResponse
 from jose import JWTError
 
 from backend.auth.jwt_tokens import decode_access_token
 from backend.rest_api.core.config import settings
+from backend.rest_api.schemas.error import ErrorDetail
 
 AUTH_HEADER_PREFIX = "Bearer "
 
@@ -34,14 +36,16 @@ async def jwt_middleware(
 
     auth_header: str | None = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith(AUTH_HEADER_PREFIX):
-        return Response(content="Missing or invalid authorization header", status_code=401)
+        detail = ErrorDetail(code="missing_auth_header", message="Missing or invalid authorization header").model_dump()
+        return JSONResponse(content={"detail": detail}, status_code=401)
 
     token = auth_header[len(AUTH_HEADER_PREFIX) :]
 
     try:
         user_id = decode_access_token(token)
     except JWTError:
-        return Response(content="Invalid or expired token", status_code=401)
+        detail = ErrorDetail(code="invalid_token", message="Invalid or expired token").model_dump()
+        return JSONResponse(content={"detail": detail}, status_code=401)
 
     request.state.user_id = user_id
     return await call_next(request)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -8,6 +8,7 @@ from backend.auth.hashing import verify_password
 from backend.auth.jwt_tokens import create_access_token
 from backend.database.session import get_db
 from backend.models.user import User
+from backend.rest_api.errors import http_error
 from backend.rest_api.api.deps import get_current_user
 from backend.rest_api.schemas.auth import LoginRequest, MeResponse, RegisterRequest, RegisterResponse
 
@@ -20,7 +21,7 @@ async def register_user(
 ) -> RegisterResponse:
     existing = await session.scalar(select(User).where(User.username == payload.username))
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists")
+        raise http_error(status.HTTP_400_BAD_REQUEST, code="username_taken", message="Username already exists")
 
     user = User(
         username=payload.username,
@@ -33,7 +34,7 @@ async def register_user(
         await session.commit()
     except IntegrityError:
         await session.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists")
+        raise http_error(status.HTTP_400_BAD_REQUEST, code="username_taken", message="Username already exists")
 
     await session.refresh(user)
 
@@ -48,7 +49,7 @@ async def login_user(
 ) -> RegisterResponse:
     user = await session.scalar(select(User).where(User.username == payload.username))
     if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+        raise http_error(status.HTTP_401_UNAUTHORIZED, code="invalid_credentials", message="Invalid username or password")
 
     access_token = create_access_token(user.id)
     return RegisterResponse(access_token=access_token, token_type="Bearer")

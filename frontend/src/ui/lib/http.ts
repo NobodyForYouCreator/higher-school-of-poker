@@ -38,7 +38,15 @@ export async function apiGet<T>(path: string, token?: string | null): Promise<T>
   });
   const payload = await parseJsonOrText(res);
   if (!res.ok) {
-    const msg = typeof payload === "string" ? payload : (payload as any)?.detail ?? "Request failed";
+    const detail = typeof payload === "string" ? null : (payload as any)?.detail;
+    const msg =
+      typeof payload === "string"
+        ? payload
+        : typeof detail === "string"
+          ? detail
+          : typeof detail?.message === "string"
+            ? detail.message
+            : "Request failed";
     throw new ApiError(msg, res.status, typeof payload === "string" ? payload : JSON.stringify(payload));
   }
   return payload as T;
@@ -59,7 +67,15 @@ export async function apiPost<TOut, TIn extends Record<string, unknown>>(
   });
   const payload = await parseJsonOrText(res);
   if (!res.ok) {
-    const msg = typeof payload === "string" ? payload : (payload as any)?.detail ?? "Request failed";
+    const detail = typeof payload === "string" ? null : (payload as any)?.detail;
+    const msg =
+      typeof payload === "string"
+        ? payload
+        : typeof detail === "string"
+          ? detail
+          : typeof detail?.message === "string"
+            ? detail.message
+            : "Request failed";
     throw new ApiError(msg, res.status, typeof payload === "string" ? payload : JSON.stringify(payload));
   }
   return payload as TOut;
@@ -72,7 +88,15 @@ export async function apiPostEmpty<TOut>(path: string, token?: string | null): P
   });
   const payload = await parseJsonOrText(res);
   if (!res.ok) {
-    const msg = typeof payload === "string" ? payload : (payload as any)?.detail ?? "Request failed";
+    const detail = typeof payload === "string" ? null : (payload as any)?.detail;
+    const msg =
+      typeof payload === "string"
+        ? payload
+        : typeof detail === "string"
+          ? detail
+          : typeof detail?.message === "string"
+            ? detail.message
+            : "Request failed";
     throw new ApiError(msg, res.status, typeof payload === "string" ? payload : JSON.stringify(payload));
   }
   return payload as TOut;
