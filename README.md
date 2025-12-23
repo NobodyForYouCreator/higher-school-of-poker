@@ -130,6 +130,10 @@
 -### Запуск (локально)
     - из корня репозитория: `poetry install` затем `poetry run uvicorn backend.rest_api.main:app --reload --host 0.0.0.0 --port 8000`
 
+-### Миграции (Alembic)
+    - применить миграции: `poetry run alembic upgrade head` (или `python -m alembic upgrade head` если зависимости установлены в venv)
+    - создать миграцию: `poetry run alembic revision --autogenerate -m "message"`
+
 - ### Docker
 
     - uvicorn

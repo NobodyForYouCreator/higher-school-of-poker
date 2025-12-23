@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.middleware import jwt_middleware
 from .api.router import router as api_router
 from .core.config import settings
+from backend.ws_api.router import router as ws_router
 
 app = FastAPI(title=settings.app_name)
 _cors_origins = settings.cors_list()
@@ -17,6 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router, prefix=settings.api_prefix)
+app.include_router(ws_router)
 
 
 @app.middleware("http")

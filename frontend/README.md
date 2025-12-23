@@ -1,27 +1,19 @@
-# Frontend (React + Vite + TypeScript + Tailwind)
+# Frontend
 
-## Требования
+Vite + React + TypeScript UI for **Higher School of Poker**.
 
-- Node.js 18+ (рекомендуется 20+)
+## Run (dev)
 
-## Настройка
-
-1) Создай файл `frontend/.env` на базе `frontend/.env.example`.
-2) Укажи адреса бэкенда:
-
-- `VITE_API_BASE_URL` — REST API (пример: `http://localhost:8000`)
-- `VITE_WS_BASE_URL` — WebSocket (пример: `ws://localhost:8000`)
-
-## Запуск
+1) Start backend on `http://localhost:8000`
+2) In `frontend/`:
 
 ```bash
-cd frontend
-npm install
+npm i
 npm run dev
 ```
 
-## Авторизация
+## Environment
 
-- JWT хранится в `localStorage` по ключу `hsepoker.access_token`.
-- В dev-режиме на странице `/login` есть кнопка **Dev: войти без бэка** (ставит фиктивный токен).
+- `VITE_API_URL` (default: `http://localhost:8000`)
+- `VITE_WS_URL` (optional; by default derived from `VITE_API_URL`)
 

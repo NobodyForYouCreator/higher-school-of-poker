@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from random import randint
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from backend.poker_engine.table import Table
+from backend.services.table_store import TableRecord, tables_dict
+from backend.ws_api.tables import maybe_start_game, notify_table_changed
 
 router = APIRouter(tags=["table"])
 
@@ -15,16 +16,6 @@ class TableCreateRequest(BaseModel):
     max_players: int = Field(ge=2, le=9)
     buy_in: int = Field(ge=0)
     private: bool = False
-
-
-@dataclass(slots=True)
-class TableRecord:
-    table: Table
-    buy_in: int
-    private: bool
-
-
-tables_dict: dict[int, TableRecord] = {}
 
 
 def _serialize_summary(table_id: int, record: TableRecord) -> dict:
@@ -89,38 +80,41 @@ def _current_user_id(request: Request) -> int:
 
 
 @router.post("/tables/{table_id}/join")
-def join_table(request: Request, table_id: int) -> dict:
+async def join_table(request: Request, table_id: int) -> dict:
     record = tables_dict.get(table_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Table not found")
 
     user_id = _current_user_id(request)
-    already_in = any(p.user_id == user_id for p in record.table.players)
-    if not already_in:
-        record.table.seat_player(user_id, record.buy_in)
+    # Ensure user has a single role at the table.
+    record.table.leave(user_id)
+    record.table.seat_player(user_id, record.buy_in)
+    await notify_table_changed(table_id)
+    await maybe_start_game(table_id)
     return {"ok": True}
 
 
 @router.post("/tables/{table_id}/leave")
-def leave_table(request: Request, table_id: int) -> dict:
+async def leave_table(request: Request, table_id: int) -> dict:
     record = tables_dict.get(table_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Table not found")
 
     user_id = _current_user_id(request)
     record.table.leave(user_id)
+    await notify_table_changed(table_id)
     return {"ok": True}
 
 
 @router.post("/tables/{table_id}/spectate")
-def spectate_table(request: Request, table_id: int) -> dict:
+async def spectate_table(request: Request, table_id: int) -> dict:
     record = tables_dict.get(table_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Table not found")
 
     user_id = _current_user_id(request)
-    already_in = any(p.user_id == user_id for p in record.table.spectators)
-    if not already_in:
-        record.table.seat_player(user_id, record.buy_in, is_spectator=True)
+    # Ensure user has a single role at the table.
+    record.table.leave(user_id)
+    record.table.seat_player(user_id, record.buy_in, is_spectator=True)
+    await notify_table_changed(table_id)
     return {"ok": True}
-
