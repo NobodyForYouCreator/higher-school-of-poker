@@ -8,11 +8,16 @@ from typing import Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from backend.auth.jwt_tokens import decode_access_token
+from backend.database.session import SessionLocal
+from backend.models.user import User
 from backend.poker_engine.game_state import PlayerAction
 from backend.poker_engine.player_state import PlayerStatus
-from backend.services.table_store import tables_dict
+from backend.services.game_service import GameService
+from backend.services.table_store import table_store
 
 router = APIRouter(tags=["ws"])
+
+_game_service = GameService()
 
 
 @dataclass(slots=True)
@@ -31,6 +36,17 @@ LEAVE_GRACE_SECONDS = 60
 NEXT_HAND_DELAY_SECONDS = 5
 
 
+async def _credit_balance(user_id: int, amount: int) -> None:
+    if amount <= 0:
+        return
+    async with SessionLocal() as session:
+        user = await session.get(User, user_id)
+        if user is None:
+            return
+        user.balance = int(user.balance) + int(amount)
+        await session.commit()
+
+
 def _get_lock(table_id: int) -> asyncio.Lock:
     lock = _table_locks.get(table_id)
     if lock is None:
@@ -40,7 +56,7 @@ def _get_lock(table_id: int) -> asyncio.Lock:
 
 
 def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict[str, Any]:
-    record = tables_dict.get(table_id)
+    record = table_store.get(table_id)
     if record is None:
         raise KeyError("table_not_found")
 
@@ -75,7 +91,7 @@ def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict
                 current_player_id = None
 
     players: list[dict[str, Any]] = []
-    for p in table.players:
+    for p in table.public_players():
         hole_cards = [str(card) for card in getattr(p, "hole_cards", [])]
         if not (show_all or p.user_id == viewer_id):
             hole_cards = []
@@ -113,7 +129,7 @@ async def _try_send(conn: _Conn, message: dict[str, Any]) -> bool:
         return True
     except (WebSocketDisconnect, RuntimeError):
         return False
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -124,7 +140,7 @@ async def _broadcast_state(table_id: int) -> None:
     conns = list(conns_map.values())
     dead_sockets: list[WebSocket] = []
 
-    record = tables_dict.get(table_id)
+    record = table_store.get(table_id)
     if record is None:
         message = {"type": "error", "message": "Table not found"}
         for conn in conns:
@@ -141,7 +157,7 @@ async def _broadcast_state(table_id: int) -> None:
             ok = await _try_send(conn, {"type": "table_state", "payload": state})
             if not ok:
                 dead_sockets.append(conn.websocket)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             ok = await _try_send(conn, {"type": "error", "message": str(exc)})
             if not ok:
                 dead_sockets.append(conn.websocket)
@@ -157,7 +173,6 @@ def _cancel_pending_leave(table_id: int, user_id: int) -> None:
 
 
 def _schedule_delayed_leave(table_id: int, user_id: int) -> None:
-    # If a timer already exists, keep the earliest one.
     if (table_id, user_id) in _pending_leave_tasks:
         return
 
@@ -171,12 +186,14 @@ def _schedule_delayed_leave(table_id: int, user_id: int) -> None:
                 if still_connected:
                     return
 
-                record = tables_dict.get(table_id)
+                record = table_store.get(table_id)
                 if record is not None:
                     try:
-                        record.table.leave(user_id)
-                    except Exception:  # noqa: BLE001
+                        cashout = record.table.leave(user_id)
+                        await _credit_balance(user_id, cashout)
+                    except Exception:
                         pass
+                    table_store.delete_if_empty(table_id)
                 await _broadcast_state(table_id)
         finally:
             _pending_leave_tasks.pop((table_id, user_id), None)
@@ -199,7 +216,7 @@ def _schedule_next_hand(table_id: int) -> None:
             await asyncio.sleep(NEXT_HAND_DELAY_SECONDS)
             lock = _get_lock(table_id)
             async with lock:
-                record = tables_dict.get(table_id)
+                record = table_store.get(table_id)
                 if record is None:
                     return
 
@@ -208,13 +225,13 @@ def _schedule_next_hand(table_id: int) -> None:
                 if game is not None and bool(getattr(game, "hand_active", False)):
                     return
 
-                eligible = [p for p in table.players if p.stack > 0]
+                eligible = [p for p in table.public_players() if p.stack > 0]
                 if len(eligible) < 2:
                     return
 
                 try:
-                    table.start_game()
-                except Exception:  # noqa: BLE001
+                    await _game_service.start_hand(table)
+                except Exception:
                     return
 
                 await _broadcast_state(table_id)
@@ -235,7 +252,7 @@ async def maybe_start_game(table_id: int) -> bool:
     """Start a new hand if the table has enough eligible players; broadcast state if started."""
     lock = _get_lock(table_id)
     async with lock:
-        record = tables_dict.get(table_id)
+        record = table_store.get(table_id)
         if record is None:
             return False
 
@@ -244,14 +261,14 @@ async def maybe_start_game(table_id: int) -> bool:
         if game is not None and bool(getattr(game, "hand_active", False)):
             return False
 
-        eligible = [p for p in table.players if p.stack > 0 and p.status != PlayerStatus.SPECTATOR]
+        eligible = [p for p in table.public_players() if p.stack > 0 and p.status != PlayerStatus.SPECTATOR]
         if len(eligible) < 2:
             return False
 
         _cancel_pending_next_hand(table_id)
         try:
-            table.start_game()
-        except Exception:  # noqa: BLE001
+            await _game_service.start_hand(table)
+        except Exception:
             return False
 
         await _broadcast_state(table_id)
@@ -270,7 +287,7 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
 
     try:
         user_id = decode_access_token(token)
-    except Exception:  # noqa: BLE001
+    except Exception:
         await websocket.send_text(json.dumps({"type": "error", "message": "Invalid token"}))
         await websocket.close(code=1008)
         return
@@ -282,7 +299,7 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
         await websocket.close(code=1008)
         return
 
-    if table_id_int not in tables_dict:
+    if table_store.get(table_id_int) is None:
         await websocket.send_text(json.dumps({"type": "error", "message": "Table not found"}))
         await websocket.close(code=1008)
         return
@@ -308,7 +325,7 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
             payload = msg.get("payload") or {}
 
             async with lock:
-                record = tables_dict.get(table_id_int)
+                record = table_store.get(table_id_int)
                 if record is None:
                     await websocket.send_text(json.dumps({"type": "error", "message": "Table not found"}))
                     continue
@@ -333,6 +350,16 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
                 action_str = payload.get("action")
                 amount = payload.get("amount") or 0
 
+                is_spectator = any(s.user_id == user_id for s in table.spectators)
+                if is_spectator:
+                    await websocket.send_text(json.dumps({"type": "error", "message": "Spectators cannot act"}))
+                    continue
+
+                is_seated = any(p.user_id == user_id for p in table.public_players())
+                if not is_seated:
+                    await websocket.send_text(json.dumps({"type": "error", "message": "Player is not seated at this table"}))
+                    continue
+
                 if not isinstance(action_str, str):
                     await websocket.send_text(json.dumps({"type": "error", "message": "Missing action"}))
                     continue
@@ -340,8 +367,8 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
                 if table.game_state is None or not getattr(table.game_state, "hand_active", False):
                     _cancel_pending_next_hand(table_id_int)
                     try:
-                        table.start_game()
-                    except Exception as exc:  # noqa: BLE001
+                        await _game_service.start_hand(table)
+                    except Exception as exc:
                         await websocket.send_text(json.dumps({"type": "error", "message": str(exc)}))
                         continue
 
@@ -352,8 +379,9 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
                     continue
 
                 try:
-                    table.apply_action(user_id, player_action, int(amount))
-                except Exception as exc:  # noqa: BLE001
+                    async with SessionLocal() as session:
+                        await _game_service.apply_action(table, user_id, player_action, int(amount), session)
+                except Exception as exc:
                     await websocket.send_text(json.dumps({"type": "error", "message": str(exc)}))
                     continue
 
@@ -370,15 +398,13 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
             if conns_map is not None:
                 conns_map.pop(websocket, None)
 
-            # If this was the last WS connection for the user on this table,
-            # remove them from the table (players/spectators) as they went offline.
             still_connected = False
             conns_map = _table_conns.get(table_id_int)
             if conns_map is not None:
                 still_connected = any(c.user_id == user_id for c in conns_map.values())
 
             if not still_connected:
-                record = tables_dict.get(table_id_int)
+                record = table_store.get(table_id_int)
                 if record is not None:
                     _schedule_delayed_leave(table_id_int, user_id)
 
