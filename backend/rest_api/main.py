@@ -7,8 +7,16 @@ from .api.middleware import jwt_middleware
 from .api.router import router as api_router
 from .core.config import settings
 from backend.ws_api.router import router as ws_router
+from backend.services.table_service import TableService
+from backend.services.table_store import table_store
+from backend.ws_api.tables import maybe_start_game, notify_table_changed
 
 app = FastAPI(title=settings.app_name)
+app.state.table_service = TableService(
+    table_store,
+    notify_table_changed=notify_table_changed,
+    maybe_start_game=maybe_start_game,
+)
 _cors_origins = settings.cors_list()
 app.add_middleware(
     CORSMiddleware,

@@ -1,120 +1,83 @@
 from __future__ import annotations
 
-from random import randint
+from fastapi import APIRouter, Depends, HTTPException
 
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
+from backend.database.session import get_db
+from backend.rest_api.api.deps import get_current_user_id, get_table_service
+from backend.rest_api.schemas.common import OkResponse
+from backend.rest_api.schemas.table import TableCreateRequest, TableDetail, TableSummary
+from backend.services.table_service import InsufficientBalanceError, TableNotFoundError, TableService, UserNotFoundError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.poker_engine.table import Table
-from backend.services.table_store import TableRecord, tables_dict
-from backend.ws_api.tables import maybe_start_game, notify_table_changed
-
-router = APIRouter(tags=["table"])
-
-
-class TableCreateRequest(BaseModel):
-    max_players: int = Field(ge=2, le=9)
-    buy_in: int = Field(ge=0)
-    private: bool = False
+router = APIRouter(prefix="/tables", tags=["tables"])
 
 
-def _serialize_summary(table_id: int, record: TableRecord) -> dict:
-    return {
-        "id": str(table_id),
-        "max_players": record.table.max_players,
-        "buy_in": record.buy_in,
-        "private": record.private,
-        "players_count": len(record.table.players),
-        "spectators_count": len(record.table.spectators),
-    }
+@router.get("/", response_model=list[TableSummary])
+def list_tables(service: TableService = Depends(get_table_service)) -> list[TableSummary]:
+    return service.list_tables()
 
 
-@router.get("/tables")
-def list_tables() -> list[dict]:
-    return [_serialize_summary(table_id, record) for table_id, record in tables_dict.items()]
+@router.post("/create", response_model=TableSummary)
+def create_table(
+    payload: TableCreateRequest,
+    service: TableService = Depends(get_table_service),
+) -> TableSummary:
+    return service.create_table(payload)
 
 
-@router.post("/tables/create")
-def create_table(payload: TableCreateRequest) -> dict:
-    table_id = randint(0, 100_000)
-    while table_id in tables_dict:
-        table_id = randint(0, 100_000)
-
-    table = Table(table_id=table_id, max_players=payload.max_players)
-    tables_dict[table_id] = TableRecord(table=table, buy_in=payload.buy_in, private=payload.private)
-    return _serialize_summary(table_id, tables_dict[table_id])
-
-
-@router.get("/tables/{table_id}")
-def get_table_info(table_id: int) -> dict:
-    record = tables_dict.get(table_id)
-    if record is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-
-    info = _serialize_summary(table_id, record)
-    info["seats"] = [
-        {
-            "position": player.position,
-            "user_id": player.user_id,
-            "stack": player.stack,
-            "is_spectator": False,
-        }
-        for player in record.table.players
-    ] + [
-        {
-            "position": -1,
-            "user_id": spectator.user_id,
-            "stack": spectator.stack,
-            "is_spectator": True,
-        }
-        for spectator in record.table.spectators
-    ]
-    return info
+@router.get("/{table_id}", response_model=TableDetail)
+def get_table_info(
+    table_id: int,
+    service: TableService = Depends(get_table_service),
+) -> TableDetail:
+    try:
+        return service.get_table_info(table_id)
+    except TableNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-def _current_user_id(request: Request) -> int:
-    user_id = getattr(request.state, "user_id", None)
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return int(user_id)
+@router.post("/{table_id}/join", response_model=OkResponse)
+async def join_table(
+    table_id: int,
+    user_id: int = Depends(get_current_user_id),
+    service: TableService = Depends(get_table_service),
+    db: AsyncSession = Depends(get_db),
+) -> OkResponse:
+    try:
+        return await service.join_table(table_id, user_id=user_id, db=db)
+    except TableNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except UserNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InsufficientBalanceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/tables/{table_id}/join")
-async def join_table(request: Request, table_id: int) -> dict:
-    record = tables_dict.get(table_id)
-    if record is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-
-    user_id = _current_user_id(request)
-    # Ensure user has a single role at the table.
-    record.table.leave(user_id)
-    record.table.seat_player(user_id, record.buy_in)
-    await notify_table_changed(table_id)
-    await maybe_start_game(table_id)
-    return {"ok": True}
-
-
-@router.post("/tables/{table_id}/leave")
-async def leave_table(request: Request, table_id: int) -> dict:
-    record = tables_dict.get(table_id)
-    if record is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-
-    user_id = _current_user_id(request)
-    record.table.leave(user_id)
-    await notify_table_changed(table_id)
-    return {"ok": True}
+@router.post("/{table_id}/leave", response_model=OkResponse)
+async def leave_table(
+    table_id: int,
+    user_id: int = Depends(get_current_user_id),
+    service: TableService = Depends(get_table_service),
+    db: AsyncSession = Depends(get_db),
+) -> OkResponse:
+    try:
+        return await service.leave_table(table_id, user_id=user_id, db=db)
+    except TableNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except UserNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/tables/{table_id}/spectate")
-async def spectate_table(request: Request, table_id: int) -> dict:
-    record = tables_dict.get(table_id)
-    if record is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-
-    user_id = _current_user_id(request)
-    # Ensure user has a single role at the table.
-    record.table.leave(user_id)
-    record.table.seat_player(user_id, record.buy_in, is_spectator=True)
-    await notify_table_changed(table_id)
-    return {"ok": True}
+@router.post("/{table_id}/spectate", response_model=OkResponse)
+async def spectate_table(
+    table_id: int,
+    user_id: int = Depends(get_current_user_id),
+    service: TableService = Depends(get_table_service),
+    db: AsyncSession = Depends(get_db),
+) -> OkResponse:
+    try:
+        return await service.spectate_table(table_id, user_id=user_id, db=db)
+    except TableNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except UserNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -26,7 +26,6 @@ async def jwt_middleware(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
-    # Let CORS preflight requests through without auth.
     if request.method.upper() == "OPTIONS":
         return await call_next(request)
 

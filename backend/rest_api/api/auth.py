@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -8,11 +8,12 @@ from backend.auth.hashing import verify_password
 from backend.auth.jwt_tokens import create_access_token
 from backend.database.session import get_db
 from backend.models.user import User
+from backend.rest_api.api.deps import get_current_user
 from backend.rest_api.schemas.auth import LoginRequest, MeResponse, RegisterRequest, RegisterResponse
 
-router = APIRouter(tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/auth/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
     payload: RegisterRequest,
     session: AsyncSession = Depends(get_db),
@@ -24,6 +25,7 @@ async def register_user(
     user = User(
         username=payload.username,
         password_hash=hash_password(payload.password),
+        balance=5000,
     )
 
     session.add(user)
@@ -39,7 +41,7 @@ async def register_user(
     return RegisterResponse(access_token=access_token, token_type="Bearer")
 
 
-@router.post("/auth/login", response_model=RegisterResponse)
+@router.post("/login", response_model=RegisterResponse)
 async def login_user(
     payload: LoginRequest,
     session: AsyncSession = Depends(get_db),
@@ -52,16 +54,6 @@ async def login_user(
     return RegisterResponse(access_token=access_token, token_type="Bearer")
 
 
-@router.get("/auth/me", response_model=MeResponse)
-async def me(
-    request: Request,
-    session: AsyncSession = Depends(get_db),
-) -> MeResponse:
-    user_id = getattr(request.state, "user_id", None)
-    if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-
-    user = await session.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return MeResponse(id=user.id, username=user.username)
+@router.get("/me", response_model=MeResponse)
+async def me(user: User = Depends(get_current_user)) -> MeResponse:
+    return MeResponse(id=user.id, username=user.username, balance=int(user.balance))

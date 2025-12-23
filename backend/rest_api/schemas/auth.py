@@ -21,3 +21,4 @@ class LoginRequest(BaseModel):
 class MeResponse(BaseModel):
     id: int
     username: str
+    balance: int
