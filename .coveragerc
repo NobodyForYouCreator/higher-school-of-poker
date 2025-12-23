@@ -1,0 +1,5 @@
+[run]
+omit =
+    backend/tests/*
+    backend/ws_api/*
+    backend/poker_engine/test.py
