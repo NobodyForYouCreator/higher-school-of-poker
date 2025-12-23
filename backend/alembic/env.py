@@ -17,10 +17,6 @@ if str(REPO_ROOT) not in sys.path:
 from backend.database.base import Base
 from backend.rest_api.core.config import settings
 
-# Import models so they are registered in Base.metadata for autogenerate.
-from backend.models.user import User  # noqa: F401
-from backend.models.player_stats import PlayerStats  # noqa: F401
-
 config = context.config
 
 if config.config_file_name is not None:
