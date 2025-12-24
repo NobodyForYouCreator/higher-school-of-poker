@@ -14,6 +14,7 @@ from backend.rest_api.schemas.auth import LoginRequest, MeResponse, RegisterRequ
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
     payload: RegisterRequest,
@@ -49,7 +50,11 @@ async def login_user(
 ) -> RegisterResponse:
     user = await session.scalar(select(User).where(User.username == payload.username))
     if not user or not verify_password(payload.password, user.password_hash):
-        raise http_error(status.HTTP_401_UNAUTHORIZED, code="invalid_credentials", message="Invalid username or password")
+        raise http_error(
+            status.HTTP_401_UNAUTHORIZED,
+            code="invalid_credentials",
+            message="Invalid username or password",
+        )
 
     access_token = create_access_token(user.id)
     return RegisterResponse(access_token=access_token, token_type="Bearer")

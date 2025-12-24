@@ -19,6 +19,7 @@ router = APIRouter(tags=["ws"])
 
 _game_service = GameService()
 
+
 def _ws_error(code: str, message: str) -> dict[str, Any]:
     return {"type": "error", "code": code, "message": message}
 
@@ -85,12 +86,20 @@ def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict
         winners = [int(p.user_id) for p in getattr(game, "winners", []) or []]
         best = getattr(game, "best_hand", None)
         if best is not None:
-            best_hand_rank = str(getattr(getattr(best, "rank", None), "name", getattr(getattr(best, "rank", None), "value", "")) or "")
+            best_hand_rank = str(
+                getattr(
+                    getattr(best, "rank", None),
+                    "name",
+                    getattr(getattr(best, "rank", None), "value", ""),
+                )
+                or ""
+            )
             best_hand_cards = [str(c) for c in getattr(best, "cards", []) or []]
-        if getattr(game, "current_player_index", None) is not None:
+        idx = getattr(game, "current_player_index", None)
+        if idx is not None:
             try:
-                current_player_id = int(game.players[game.current_player_index].user_id)
-            except Exception:  # noqa: BLE001
+                current_player_id = int(game.players[int(idx)].user_id)
+            except Exception:
                 current_player_id = None
 
     players: list[dict[str, Any]] = []
@@ -360,7 +369,9 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
 
                 is_seated = any(p.user_id == user_id for p in table.public_players())
                 if not is_seated:
-                    await websocket.send_text(json.dumps(_ws_error("player_not_seated", "Player is not seated at this table")))
+                    await websocket.send_text(
+                        json.dumps(_ws_error("player_not_seated", "Player is not seated at this table"))
+                    )
                     continue
 
                 if not isinstance(action_str, str):

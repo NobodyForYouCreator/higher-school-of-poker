@@ -50,13 +50,13 @@ async def _get_player_history(db: AsyncSession, user_id: int, *, limit: int, off
         .offset(offset)
     )
     result = await db.execute(query)
-    games: list[PlayerGame] = result.scalars().all()
+    games = list(result.scalars().all())
     history: list[PlayerHistoryEntry] = []
     for pg in games:
         game = pg.game
         history.append(
             PlayerHistoryEntry(
-                game_id=pg.finished_game_uuid,
+                game_id=str(pg.finished_game_uuid) if pg.finished_game_uuid is not None else None,
                 table_id=pg.table_id,
                 user_id=pg.user_id,
                 hole_cards=pg.hole_cards,
@@ -94,7 +94,11 @@ async def get_my_history(
 @router.get("/{user_id}/stats", response_model=PlayerStatsOut)
 async def get_user_stats(user_id: int, db: AsyncSession = Depends(get_db)) -> PlayerStatsOut:
     if user_id <= 0:
-        raise http_error(status.HTTP_400_BAD_REQUEST, code="invalid_user_id", message="user_id должен быть положительным")
+        raise http_error(
+            status.HTTP_400_BAD_REQUEST,
+            code="invalid_user_id",
+            message="user_id должен быть положительным",
+        )
     return await _get_player_stats(db, user_id)
 
 
@@ -107,5 +111,9 @@ async def get_user_history(
     db: AsyncSession = Depends(get_db),
 ) -> list[PlayerHistoryEntry]:
     if user_id <= 0:
-        raise http_error(status.HTTP_400_BAD_REQUEST, code="invalid_user_id", message="user_id должен быть положительным")
+        raise http_error(
+            status.HTTP_400_BAD_REQUEST,
+            code="invalid_user_id",
+            message="user_id должен быть положительным",
+        )
     return await _get_player_history(db, user_id, limit=limit, offset=offset)

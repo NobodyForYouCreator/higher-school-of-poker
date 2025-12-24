@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from typing import Union
+
 from jose import jwt, JWTError
+
 from backend.rest_api.core import config
 
 ALGORITHM = "HS256"
+
 
 def create_access_token(user_id: Union[int, str]) -> str:
     now = datetime.now(timezone.utc)
@@ -15,6 +18,7 @@ def create_access_token(user_id: Union[int, str]) -> str:
         "exp": int(exp.timestamp()),
     }
     return jwt.encode(payload, config.JWT_SECRET, algorithm=ALGORITHM)
+
 
 def decode_access_token(token: str) -> int:
     payload = jwt.decode(token, config.JWT_SECRET, algorithms=[ALGORITHM])

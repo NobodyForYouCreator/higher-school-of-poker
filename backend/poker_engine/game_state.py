@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Optional
 
-from backend.poker_engine.cards import Card, HandEvaluator
+from backend.poker_engine.cards import Card, HandEvaluation, HandEvaluator
 from backend.poker_engine.deck import Deck
 from backend.poker_engine.player_state import PlayerState, PlayerStatus
 
@@ -55,7 +55,7 @@ class GameState:
         self.last_raiser_index: Optional[int] = None
         self.hand_active = False
         self.winners: List[PlayerState] = []
-        self.best_hand = None
+        self.best_hand: HandEvaluation | None = None
 
     def start_game(self) -> None:
         """Prepare deck, deal cards and move to the preflop round."""
@@ -217,7 +217,6 @@ class GameState:
                 return
             continue
 
-
     def _prepare_new_hand(self) -> None:
         self.deck.reset()
         self.board = []
@@ -281,6 +280,9 @@ class GameState:
             return
         if self._is_round_complete():
             self.current_player_index = None
+            self.advance_phase()
+            return
+        if self.current_player_index is None:
             self.advance_phase()
             return
         next_index = self._find_next_player(self._next_index(self.current_player_index))

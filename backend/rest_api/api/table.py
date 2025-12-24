@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi import status
-from backend.rest_api.errors import http_error
+from fastapi import APIRouter, Depends, status
 
 from backend.database.session import get_db
 from backend.rest_api.api.deps import get_current_user_id, get_table_service
+from backend.rest_api.errors import http_error
 from backend.rest_api.schemas.common import OkResponse
 from backend.rest_api.schemas.table import TableCreateRequest, TableDetail, TableSummary
 from backend.services.table_service import InsufficientBalanceError, TableNotFoundError, TableService, UserNotFoundError
@@ -52,7 +51,11 @@ async def join_table(
     except UserNotFoundError as exc:
         raise http_error(status.HTTP_404_NOT_FOUND, code="user_not_found", message="User not found") from exc
     except InsufficientBalanceError as exc:
-        raise http_error(status.HTTP_400_BAD_REQUEST, code="insufficient_balance", message="Not enough balance for buy-in") from exc
+        raise http_error(
+            status.HTTP_400_BAD_REQUEST,
+            code="insufficient_balance",
+            message="Not enough balance for buy-in",
+        ) from exc
 
 
 @router.post("/{table_id}/leave", response_model=OkResponse)

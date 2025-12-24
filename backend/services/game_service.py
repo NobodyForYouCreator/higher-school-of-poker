@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.poker_engine.table import Table
 from backend.poker_engine.game_state import PlayerAction
-from backend.poker_engine.player_state import PlayerState
 from backend.models.finished_game import FinishedGame
 from backend.models.player_game import PlayerGame
 from backend.models.player_stats import PlayerStats, StatsDelta, update_stats
@@ -20,13 +19,25 @@ class GameService:
         self._start_stacks[table.table_id] = {player.user_id: player.stack for player in table.players}
         table.start_game()
 
-    async def apply_action(self, table: Table, user_id: int, action: PlayerAction, amount: int, db: AsyncSession) -> None:
+    async def apply_action(
+        self,
+        table: Table,
+        user_id: int,
+        action: PlayerAction,
+        amount: int,
+        db: AsyncSession,
+    ) -> None:
         table.apply_action(user_id, action, amount)
-        if not table.game_state.hand_active:
+        game_state = table.game_state
+        if game_state is None:
+            return
+        if not game_state.hand_active:
             await self._record_finished_hand(table, db)
 
     async def _record_finished_hand(self, table: Table, db: AsyncSession) -> None:
         game_state = table.game_state
+        if game_state is None:
+            return
         start_stacks = self._start_stacks.pop(table.table_id, None)
         if start_stacks is None:
             return

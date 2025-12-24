@@ -23,4 +23,3 @@ class PlayerHistoryEntry(BaseModel):
     board: list[str]
     winners: list[int]
     pot: int
-

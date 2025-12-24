@@ -16,8 +16,6 @@ class FinishedGame(Base):
     __tablename__ = "finished_games"
     uuid: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     table_id: Mapped[int] = mapped_column(Integer, nullable=False)
-
-
     pot: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
 
     board: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)

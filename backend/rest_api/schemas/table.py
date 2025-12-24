@@ -25,4 +25,3 @@ class TableSeat(BaseModel):
 
 class TableDetail(TableSummary):
     seats: list[TableSeat]
-

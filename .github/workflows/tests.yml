@@ -42,6 +42,14 @@ jobs:
         run: |
           "$PYTHON" -m poetry install --with dev
 
+      - name: Lint (flake8)
+        run: |
+          "$PYTHON" -m poetry run flake8
+
+      - name: Typecheck (mypy)
+        run: |
+          "$PYTHON" -m poetry run mypy backend
+
       - name: Run tests
         run: |
           "$PYTHON" -m poetry run pytest
