@@ -720,15 +720,15 @@ select {
   border-radius: 26px;
   overflow: hidden;
   border: 1px solid var(--border);
-  --seatW: clamp(140px, 16.5vw, 176px);
+  --seatW: clamp(132px, 14.5vw, 168px);
   --avatarW: clamp(30px, 3.4vw, 36px);
-  --holeCardW: clamp(44px, 6vw, 56px);
+  --holeCardW: clamp(40px, 5.2vw, 54px);
   --holeCardH: calc(var(--holeCardW) * 1.4);
   background:
     radial-gradient(800px 420px at 50% 55%, rgba(0, 0, 0, 0.0), rgba(0, 0, 0, 0.55)),
     url("/table.svg") center/cover no-repeat;
   box-shadow: var(--shadow);
-  min-height: 520px;
+  min-height: 600px;
 }
 
 .tableHud {
@@ -773,7 +773,7 @@ select {
 
 .seatLayer {
   position: relative;
-  height: 350px;
+  height: 410px;
 }
 
 .seat {
@@ -884,10 +884,10 @@ select {
 
 @media (max-width: 980px) {
   .seatLayer {
-    height: 410px;
+    height: 460px;
   }
   .tableStage {
-    min-height: 620px;
+    min-height: 680px;
   }
 }
 
