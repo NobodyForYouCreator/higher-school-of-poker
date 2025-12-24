@@ -11,11 +11,15 @@ export default function CardView({ code }: { code: string }) {
   return (
     <div className={`card ${colorClass}`} aria-label={`${rank}${suit}`}>
       <div className="cardInner">
-        <div className="cardTop">
-          <div className="cardRank">{rank}</div>
-          <div className="cardSuit">{suit}</div>
+        <div className="cardCorner cardCornerTop">
+          <span className="cardRank">{rank}</span>
+          <span className="cardSuit">{suit}</span>
         </div>
         <div className="cardPip">{suit}</div>
+        <div className="cardCorner cardCornerBottom">
+          <span className="cardRank">{rank}</span>
+          <span className="cardSuit">{suit}</span>
+        </div>
       </div>
     </div>
   );

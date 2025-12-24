@@ -928,37 +928,47 @@ select {
   position: absolute;
   inset: 0;
   padding: 8px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  position: relative;
 }
 
-.cardTop {
-  display: flex;
-  flex-direction: column;
+.cardCorner {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
   gap: 2px;
-  align-items: flex-start;
-  justify-content: flex-start;
   font-weight: 850;
   letter-spacing: 0.1px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cardCornerTop {
+  top: 6px;
+  left: 6px;
+}
+
+.cardCornerBottom {
+  bottom: 6px;
+  right: 6px;
+  transform: rotate(180deg);
 }
 
 .cardRank {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
 }
 
 .cardSuit {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
 }
 
 .cardPip {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
   opacity: 0.95;
 }
 
