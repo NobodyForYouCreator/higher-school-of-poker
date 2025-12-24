@@ -34,9 +34,6 @@ export default function TableStage({
             <Badge>Фаза: {state.phase}</Badge>
             {state.current_player_id ? <Badge tone="good">Ходит: {displayName(state.current_player_id)}</Badge> : null}
             {state.current_bet !== null ? <Badge tone="warn">Текущая ставка: {state.current_bet}</Badge> : null}
-            <Badge tone="warn" className="mono">
-              Пот: {state.pot}
-            </Badge>
             {state.phase === "finished" && winners.length ? <Badge tone="good">Победил(и): {winners.map(displayName).join(", ")}</Badge> : null}
           </div>
 
@@ -45,7 +42,6 @@ export default function TableStage({
               <CardView key={idx} code={state.board[idx] ?? ""} />
             ))}
           </div>
-          <div className="potPill mono">Пот: {state.pot}</div>
         </div>
 
         <div className="seatLayer">
