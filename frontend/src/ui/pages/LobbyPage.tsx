@@ -80,7 +80,7 @@ export default function LobbyPage() {
                 {auth.user?.balance ?? 0} фишек
               </Badge>
             ) : (
-              <Badge tone="warn">Гость</Badge>
+              <Badge tone="warn">Войдите, чтобы играть</Badge>
             )}
             <Button disabled={loading} onClick={() => void refresh()}>
               Обновить
@@ -129,25 +129,22 @@ export default function LobbyPage() {
             ) : null}
             {emptyState ? <div className="muted">{emptyState}</div> : null}
             {filtered.map((t) => (
-              <div key={t.id} className="tableCard">
-                <div className="tableCardMain">
-                  <div className="tableCardTitle">Стол #{t.id}</div>
-                  <div className="tableCardMeta">
-                    <Badge tone={t.private ? "warn" : "neutral"}>{t.private ? "Приватный" : "Публичный"}</Badge>
-                    <Badge className="mono">Buy-in: {t.buy_in}</Badge>
-                    <Badge>
-                      Игроки: {t.players_count}/{t.max_players}
-                    </Badge>
-                    <Badge>Зрители: {t.spectators_count}</Badge>
+                <div key={t.id} className="tableCard">
+                  <div className="tableCardMain">
+                    <div className="tableCardTitle">Стол #{t.id}</div>
+                    <div className="tableCardMeta">
+                      {t.private ? <Badge tone="warn">Приватный</Badge> : null}
+                      <Badge className="mono">Вход: {t.buy_in}</Badge>
+                      <Badge>{t.players_count}/{t.max_players} игроков</Badge>
+                      {t.spectators_count > 0 ? <Badge>{t.spectators_count} зрителей</Badge> : null}
+                    </div>
                   </div>
-                </div>
-                <div className="tableCardSide">
-                  <div className="hint">Блайнды</div>
-                  <div className="mono">SB 50 · BB 100</div>
-                </div>
-                <div className="tableCardActions">
-                  <Button
-                    onClick={() => {
+                  <div className="tableCardSide">
+                    <div className="mono">Блайнды 50/100</div>
+                  </div>
+                  <div className="tableCardActions">
+                    <Button
+                      onClick={() => {
                       if (!isAuthed) navigate("/login", { state: { from: `/tables/${t.id}` } });
                       else navigate(`/tables/${t.id}`);
                     }}
@@ -158,32 +155,6 @@ export default function LobbyPage() {
               </div>
             ))}
           </div>
-        </PanelBody>
-      </Panel>
-
-      <Panel>
-        <PanelHeader>
-          <PanelTitle>Подсказки</PanelTitle>
-          <Badge>Игровая логика</Badge>
-        </PanelHeader>
-        <PanelBody>
-          <div className="noteList">
-            <div className="note">Раздача стартует автоматически, когда за столом минимум 2 игрока.</div>
-            <div className="note">Если вы зритель, можно включить показ карт.</div>
-            <div className="note">Если вы закрыли вкладку, сервер уберёт вас со стола спустя небольшую паузу.</div>
-          </div>
-          {!isAuthed ? (
-            <div className="callout">
-              <div>
-                <div className="calloutTitle">Нужен аккаунт</div>
-                <div className="calloutText">Чтобы сесть за стол, нужно войти.</div>
-              </div>
-              <div className="spacer" />
-              <Button variant="primary" onClick={() => navigate("/login")}>
-                Войти
-              </Button>
-            </div>
-          ) : null}
         </PanelBody>
       </Panel>
 
@@ -208,7 +179,7 @@ export default function LobbyPage() {
             }}
           >
             <label className="field">
-              <div className="fieldLabel">Max players (2..9)</div>
+              <div className="fieldLabel">Мест за столом</div>
               <Input
                 className="mono"
                 value={create.max_players}
@@ -219,7 +190,7 @@ export default function LobbyPage() {
               />
             </label>
             <label className="field">
-              <div className="fieldLabel">Buy-in</div>
+              <div className="fieldLabel">Вход (фишки)</div>
               <Input
                 className="mono"
                 value={create.buy_in}

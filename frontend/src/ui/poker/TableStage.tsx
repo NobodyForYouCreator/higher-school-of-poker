@@ -31,9 +31,8 @@ export default function TableStage({
       <div className="tableHud">
         <div className="tableCenter">
           <div className="tableHudRow">
-            <Badge>Фаза: {state.phase}</Badge>
             {state.current_player_id ? <Badge tone="good">Ходит: {displayName(state.current_player_id)}</Badge> : null}
-            {state.current_bet !== null ? <Badge tone="warn">Текущая ставка: {state.current_bet}</Badge> : null}
+            <Badge className="mono">Банк: {state.pot}</Badge>
             {state.phase === "finished" && winners.length ? <Badge tone="good">Победил(и): {winners.map(displayName).join(", ")}</Badge> : null}
           </div>
 
@@ -60,7 +59,7 @@ export default function TableStage({
                       <div className="seatName">
                         {displayName(p.user_id)} {isMe ? "(вы)" : ""}
                       </div>
-                      <div className="seatSub">{p.status || "active"}</div>
+                      <div className="seatSub">{p.status === "folded" ? "пас" : p.status === "all_in" ? "ва-банк" : ""}</div>
                     </div>
                     <div className="seatBadges">
                       <div className={statusDotClass(p.status, isTurn)} />
@@ -80,8 +79,8 @@ export default function TableStage({
                   )}
 
                   <div className="seatBottom mono">
-                    <div className="chips">Stack: {p.stack}</div>
-                    <div className="bet">Bet: {p.bet}</div>
+                    <div className="chips">{p.stack}</div>
+                    {p.bet > 0 ? <div className="bet">ставка {p.bet}</div> : <div className="bet" />}
                   </div>
                 </div>
               </div>

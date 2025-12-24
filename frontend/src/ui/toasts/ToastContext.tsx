@@ -45,7 +45,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <div className="row">
               <div className="toastTitle">{t.title}</div>
               <div className="spacer" />
-              <span className={toneBadge(t.tone)}>{t.tone ?? "info"}</span>
+              <span className={toneBadge(t.tone)} />
             </div>
             {t.message ? <div className="toastText">{t.message}</div> : null}
           </div>

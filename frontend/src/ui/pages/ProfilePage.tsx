@@ -173,15 +173,15 @@ export default function ProfilePage() {
                       <span className={h.won_hand ? "textGood" : "textBad"}>{h.won_hand ? "победа" : "поражение"}</span>
                     </div>
                     <div className="historyMeta">
-                      <Badge className="mono">Пот: {h.pot}</Badge>
-                      <Badge className="mono">Bet: {h.bet}</Badge>
-                      <Badge className="mono">Δ: {h.net_stack_delta}</Badge>
+                      <Badge className="mono">Банк: {h.pot}</Badge>
+                      <Badge className="mono">Ставка: {h.bet}</Badge>
+                      <Badge className="mono">Итог: {h.net_stack_delta}</Badge>
                       <Badge className="mono">Баланс: {h.resulting_balance}</Badge>
                     </div>
                     <div className="historyCards mono">
-                      <span>Hand: {h.hole_cards.join(" ") || "—"}</span>
+                      <span>Карты: {h.hole_cards.join(" ") || "—"}</span>
                       <span className="dotSep">·</span>
-                      <span>Board: {h.board.join(" ") || "—"}</span>
+                      <span>Стол: {h.board.join(" ") || "—"}</span>
                     </div>
                   </div>
                 </div>

@@ -17,13 +17,6 @@ function myPlayerState(state: TableState | null, myId: number | null) {
   return state.players.find((p) => p.user_id === myId) ?? null;
 }
 
-function wsTone(status: string) {
-  if (status === "open") return "good";
-  if (status === "connecting") return "warn";
-  if (status === "error") return "bad";
-  return "neutral";
-}
-
 export default function TablePage() {
   const auth = useAuth();
   const toasts = useToasts();
@@ -54,7 +47,7 @@ export default function TablePage() {
 
   useEffect(() => {
     if (!lastError) return;
-    toasts.push({ title: "WS", message: lastError, tone: "warn" });
+    toasts.push({ title: "Соединение", message: lastError, tone: "warn" });
   }, [lastError, toasts]);
 
   const myId = auth.user?.id ?? null;
@@ -111,7 +104,7 @@ export default function TablePage() {
   const action = useCallback(
     (type: string, amount?: number) => {
       const ok = send({ type: "player_action", payload: { action: type, amount } });
-      if (!ok) toasts.push({ title: "WS", message: "Соединение не готово", tone: "warn" });
+      if (!ok) toasts.push({ title: "Соединение", message: "Соединение не готово", tone: "warn" });
     },
     [send, toasts],
   );
@@ -126,17 +119,12 @@ export default function TablePage() {
             <PanelTitle>Стол #{tableId}</PanelTitle>
             <PanelSubtitle>
               <span className="row wrap">
-                <Badge tone={wsTone(wsStatus)} className="mono">
-                  WS: {wsStatus}
-                </Badge>
                 {iAmSeated ? <Badge tone={iAmSpectator ? "warn" : "good"}>{iAmSpectator ? "зритель" : "игрок"}</Badge> : <Badge>не за столом</Badge>}
                 {info ? (
                   <>
-                    <Badge>
-                      Игроки: {info.players_count}/{info.max_players}
-                    </Badge>
-                    <Badge className="mono">Buy-in: {info.buy_in}</Badge>
-                    <Badge>{info.private ? "Приватный" : "Публичный"}</Badge>
+                    <Badge>Игроков: {info.players_count}/{info.max_players}</Badge>
+                    <Badge className="mono">Вход: {info.buy_in}</Badge>
+                    {info.private ? <Badge tone="warn">Приватный</Badge> : null}
                   </>
                 ) : null}
               </span>
@@ -151,7 +139,7 @@ export default function TablePage() {
             ) : null}
             <Button onClick={() => navigate("/")}>В лобби</Button>
             <Button onClick={() => void refreshInfo()}>Обновить</Button>
-            <Button onClick={() => reconnect()}>WS</Button>
+            <Button onClick={() => reconnect()}>Переподключить</Button>
           </div>
         </PanelHeader>
 
@@ -179,7 +167,6 @@ export default function TablePage() {
                 <PanelBody>
                   {!iAmSeated ? (
                     <div className="stack">
-                      <div className="muted">Выберите режим входа.</div>
                       <div className="row wrap">
                         <Button
                           variant="primary"
@@ -212,7 +199,6 @@ export default function TablePage() {
                           Зритель
                         </Button>
                       </div>
-                      <div className="hint">Buy-in списывается при входе игроком, возврат происходит при выходе.</div>
                     </div>
                   ) : (
                     <div className="stack">
@@ -220,8 +206,8 @@ export default function TablePage() {
                         <Badge tone={iAmSpectator ? "warn" : "good"}>{iAmSpectator ? "Зритель" : "Игрок"}</Badge>
                         {myState ? (
                           <>
-                            <Badge className="mono">Stack: {myState.stack}</Badge>
-                            <Badge className="mono">Bet: {myState.bet}</Badge>
+                            <Badge className="mono">В игре: {myState.stack}</Badge>
+                            {myState.bet > 0 ? <Badge className="mono">Ставка: {myState.bet}</Badge> : null}
                           </>
                         ) : null}
                       </div>
@@ -232,7 +218,7 @@ export default function TablePage() {
                             const next = !showAll;
                             setShowAll(next);
                             const ok = send({ type: "toggle_show_all", payload: { show: next } });
-                            if (!ok) toasts.push({ title: "WS", message: "Соединение не готово", tone: "warn" });
+                            if (!ok) toasts.push({ title: "Соединение", message: "Соединение не готово", tone: "warn" });
                           }}
                         >
                           {showAll ? "Скрыть карты" : "Показывать карты"}
@@ -263,32 +249,27 @@ export default function TablePage() {
                 <PanelHeader>
                   <PanelTitle>Действия</PanelTitle>
                   <div className="row wrap">
-                    <Badge>{isMyTurn ? "ваш ход" : "ожидание"}</Badge>
-                    {state ? <Badge className="mono">Пот: {state.pot}</Badge> : null}
+                    <Badge tone={isMyTurn ? "good" : "neutral"}>{isMyTurn ? "Ваш ход" : "Ожидание"}</Badge>
+                    {state ? <Badge className="mono">Банк: {state.pot}</Badge> : null}
                   </div>
                 </PanelHeader>
                 <PanelBody>
                   <div className="stack">
-                    <div className="row wrap">
-                      <Badge className="mono">to call: {toCall}</Badge>
-                      <Badge className="mono">min bet: {minBet}</Badge>
-                    </div>
-
                     <div className="actionButtons">
                       <Button disabled={!canAct || !isMyTurn} onClick={() => action("fold")}>
-                        Fold
+                        Пас
                       </Button>
                       {toCall > 0 ? (
                         <Button variant="primary" disabled={!canAct || !isMyTurn} onClick={() => action("call", toCall)}>
-                          Call
+                          Уравнять
                         </Button>
                       ) : (
                         <Button variant="primary" disabled={!canAct || !isMyTurn} onClick={() => action("check")}>
-                          Check
+                          Чек
                         </Button>
                       )}
                       <Button disabled={!canAct || !isMyTurn} onClick={() => action("all_in")}>
-                        All-in
+                        Ва-банк
                       </Button>
                     </div>
 
@@ -311,11 +292,9 @@ export default function TablePage() {
                         />
                       </div>
                       <Button disabled={!canAct || !isMyTurn} onClick={() => action(currentBet && currentBet > 0 ? "raise" : "bet", betAmount)}>
-                        {currentBet && currentBet > 0 ? "Raise" : "Bet"}
+                        {currentBet && currentBet > 0 ? "Повысить" : "Ставка"}
                       </Button>
                     </div>
-
-                    <div className="hint">Раздача стартует автоматически при наличии 2+ игроков с фишками.</div>
                   </div>
                 </PanelBody>
               </Panel>
