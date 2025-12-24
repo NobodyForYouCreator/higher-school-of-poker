@@ -16,7 +16,7 @@ export default function CardView({ code }: { code: string }) {
           <span className="cardSuit">{suit}</span>
         </div>
         <div className="cardPip">{suit}</div>
-        <div className="cardCorner cardCornerBottom">
+        <div className="cardCorner cardCornerBottomLeft">
           <span className="cardRank">{rank}</span>
           <span className="cardSuit">{suit}</span>
         </div>

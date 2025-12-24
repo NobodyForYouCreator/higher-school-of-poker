@@ -943,12 +943,12 @@ select {
 
 .cardCornerTop {
   top: 6px;
-  left: 6px;
+  right: 6px;
 }
 
-.cardCornerBottom {
+.cardCornerBottomLeft {
   bottom: 6px;
-  right: 6px;
+  left: 6px;
   transform: rotate(180deg);
 }
 
