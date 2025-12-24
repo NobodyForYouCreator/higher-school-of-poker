@@ -33,8 +33,11 @@ class TableService:
         self._notify_table_changed = notify_table_changed
         self._maybe_start_game = maybe_start_game
 
-    def list_tables(self) -> list[TableSummary]:
-        return [self._serialize_summary(table_id, record) for table_id, record in self._store.list_items()]
+    def list_tables(self, *, include_private: bool = False) -> list[TableSummary]:
+        items = self._store.list_items()
+        if not include_private:
+            items = [(table_id, record) for table_id, record in items if not record.private]
+        return [self._serialize_summary(table_id, record) for table_id, record in items]
 
     def create_table(self, payload: TableCreateRequest) -> TableSummary:
         table_id, record = self._store.create(

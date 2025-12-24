@@ -54,9 +54,17 @@ export default function LobbyPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return tables;
-    return tables.filter((t) => String(t.id).includes(q));
+    const publicTables = tables.filter((t) => !t.private);
+    if (!q) return publicTables;
+    return publicTables.filter((t) => String(t.id).includes(q));
   }, [query, tables]);
+
+  const queryAsId = useMemo(() => {
+    const q = query.trim();
+    if (!q) return null;
+    if (!/^\d+$/.test(q)) return null;
+    return q;
+  }, [query]);
 
   return (
     <div className="pageGrid">
@@ -101,6 +109,24 @@ export default function LobbyPage() {
           </div>
 
           <div className="tableList">
+            {queryAsId ? (
+              <div className="callout">
+                <div>
+                  <div className="calloutTitle">Приватный стол</div>
+                  <div className="calloutText">Можно зайти напрямую по id: {queryAsId}</div>
+                </div>
+                <div className="spacer" />
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (!isAuthed) navigate("/login", { state: { from: `/tables/${queryAsId}` } });
+                    else navigate(`/tables/${queryAsId}`);
+                  }}
+                >
+                  Открыть
+                </Button>
+              </div>
+            ) : null}
             {emptyState ? <div className="muted">{emptyState}</div> : null}
             {filtered.map((t) => (
               <div key={t.id} className="tableCard">

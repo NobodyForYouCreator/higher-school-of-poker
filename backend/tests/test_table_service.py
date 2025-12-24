@@ -155,3 +155,11 @@ def test_insufficient_balance_for_buy_in() -> None:
             await service.join_table(9, user_id=1, db=db)
 
     asyncio.run(_run())
+
+
+def test_private_tables_are_not_listed() -> None:
+    service = _service_with_fixed_ids([1, 2])
+    service.create_table(TableCreateRequest(max_players=6, buy_in=5000, private=True))
+    service.create_table(TableCreateRequest(max_players=6, buy_in=5000, private=False))
+    tables = service.list_tables()
+    assert [t.id for t in tables] == ["2"]
