@@ -723,7 +723,7 @@ select {
   --seatW: clamp(132px, 14.5vw, 168px);
   --avatarW: clamp(30px, 3.4vw, 36px);
   --holeCardW: clamp(40px, 5.2vw, 54px);
-  --holeCardH: calc(var(--holeCardW) * 1.4);
+  --holeCardH: calc(var(--holeCardW) * 1.33);
   background:
     radial-gradient(800px 420px at 50% 55%, rgba(0, 0, 0, 0.0), rgba(0, 0, 0, 0.55)),
     url("/table.svg") center/cover no-repeat;
@@ -792,7 +792,7 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.18);
   backdrop-filter: blur(10px);
-  padding: 8px;
+  padding: 7px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
 }
 
