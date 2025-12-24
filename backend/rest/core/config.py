@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -10,8 +11,10 @@ JWT_ALGORITHM = "HS256"
 
 
 class Settings(BaseSettings):
+    _default_env_path = BACKEND_DIR / ".env"
+    _env_file = str(_default_env_path) if _default_env_path.exists() else os.getenv("HSEPOKER_ENV_FILE")
     model_config = SettingsConfigDict(
-        env_file=str(BACKEND_DIR / ".env"),
+        env_file=_env_file,
         env_file_encoding="utf-8",
         extra="ignore",
     )
