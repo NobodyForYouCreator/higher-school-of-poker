@@ -235,5 +235,7 @@ jobs:
           mkdir -p "$DEPLOY_PATH"
           command -v rsync >/dev/null 2>&1 || (echo "rsync not found" && exit 1)
           test -w "$DEPLOY_PATH" || (echo "No write permission for $DEPLOY_PATH" && ls -la "$DEPLOY_PATH" && exit 1)
-          rsync -a --delete \
-            frontend/dist/ "$DEPLOY_PATH/"
+          mkdir -p "$DEPLOY_PATH/assets"
+          rsync -a --delete frontend/dist/assets/ "$DEPLOY_PATH/assets/"
+          rsync -a frontend/dist/index.html "$DEPLOY_PATH/index.html"
+          rsync -a frontend/dist/table.svg "$DEPLOY_PATH/table.svg"

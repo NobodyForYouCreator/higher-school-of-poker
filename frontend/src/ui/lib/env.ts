@@ -1,5 +1,8 @@
 export function apiBaseUrl() {
-  return (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
+  const explicit = import.meta.env.VITE_API_URL as string | undefined;
+  if (explicit) return explicit;
+  if (import.meta.env.DEV) return "http://localhost:8000";
+  return window.location.origin;
 }
 
 export function wsBaseUrl() {
