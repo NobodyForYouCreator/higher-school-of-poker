@@ -79,8 +79,8 @@ export default function TableStage({
                   )}
 
                   <div className="seatBottom mono">
-                    <div className="chips">{p.stack}</div>
-                    {p.bet > 0 ? <div className="bet">ставка {p.bet}</div> : <div className="bet" />}
+                    <div className="chips">в игре {p.stack}</div>
+                    <div className="bet">ставка {p.bet}</div>
                   </div>
                 </div>
               </div>

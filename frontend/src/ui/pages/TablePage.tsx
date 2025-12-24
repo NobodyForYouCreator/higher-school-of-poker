@@ -27,7 +27,7 @@ export default function TablePage() {
   const [showAll, setShowAll] = useState(false);
   const [betAmount, setBetAmount] = useState(200);
 
-  const { status: wsStatus, state, lastError, send, reconnect } = useTableSocket(tableId ?? null, auth.token);
+  const { status: wsStatus, state, lastError, send, reconnect, disconnect } = useTableSocket(tableId ?? null, auth.token);
   const { displayName, ensure: ensureNames } = useUsernames(auth.token);
 
   const refreshInfo = useCallback(async () => {
@@ -54,6 +54,27 @@ export default function TablePage() {
   const mySeat = useMemo(() => (info && myId ? info.seats.find((s) => s.user_id === myId) ?? null : null), [info, myId]);
   const iAmSpectator = mySeat?.is_spectator ?? false;
   const iAmSeated = Boolean(mySeat);
+
+  const autoJoinedRef = useRef(false);
+  useEffect(() => {
+    if (autoJoinedRef.current) return;
+    if (auth.status !== "authed") return;
+    if (!info) return;
+    if (iAmSeated) return;
+    if (info.players_count !== 0 || info.spectators_count !== 0) return;
+
+    autoJoinedRef.current = true;
+    void (async () => {
+      try {
+        await apiPostEmpty(`/tables/${tableId}/join`, auth.token);
+        await refreshInfo();
+        await auth.refreshMe();
+        toasts.push({ title: "Вы за столом", message: "Вы вошли как игрок.", tone: "good" });
+      } catch {
+        return;
+      }
+    })();
+  }, [auth, iAmSeated, info, refreshInfo, tableId, toasts]);
 
   const myState = useMemo(() => myPlayerState(state, myId), [myId, state]);
   const currentBet = state?.current_bet ?? null;
@@ -229,9 +250,10 @@ export default function TablePage() {
                         onClick={async () => {
                           try {
                             await apiPostEmpty(`/tables/${tableId}/leave`, auth.token);
-                            await refreshInfo();
+                            disconnect();
                             await auth.refreshMe();
-                            toasts.push({ title: "Вы вышли", message: "Место освобождено.", tone: "good" });
+                            toasts.push({ title: "Вы вышли", message: "Вы в лобби.", tone: "good" });
+                            navigate("/");
                           } catch (e) {
                             const msg = e instanceof ApiError ? e.message : "Не удалось покинуть стол";
                             toasts.push({ title: "Ошибка", message: msg, tone: "bad" });

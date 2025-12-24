@@ -862,6 +862,7 @@ select {
 
 .chips {
   font-weight: 740;
+  color: var(--text);
 }
 
 .bet {
