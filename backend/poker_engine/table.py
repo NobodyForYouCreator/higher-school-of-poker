@@ -54,7 +54,8 @@ class Table:
         if len(self.players) >= self.max_players:
             raise RuntimeError("The table is full.")
         position = len(self.players)
-        player = PlayerState(user_id=user_id, stack=stack, position=position, status=initial_status or PlayerStatus.ACTIVE)
+        player = PlayerState(user_id=user_id,
+                             stack=stack, position=position, status=initial_status or PlayerStatus.ACTIVE)
         self.players.append(player)
         return player
 
