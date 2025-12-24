@@ -139,6 +139,7 @@ def test_leave_mid_hand_forces_fold_and_eviction() -> None:
         ok = await service.leave_table(7, user_id=1, db=db)
         assert ok.ok is True
         assert int(db.users[1].balance) > before
+        assert store.get(7) is not None
         assert record.table.game_state is not None
         assert record.table.game_state.hand_active is False
         assert [p.user_id for p in record.table.players] == [2]

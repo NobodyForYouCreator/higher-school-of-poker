@@ -720,6 +720,8 @@ select {
   border-radius: 26px;
   overflow: hidden;
   border: 1px solid var(--border);
+  --seatW: clamp(128px, 18vw, 176px);
+  --avatarW: clamp(30px, 3.4vw, 36px);
   background:
     radial-gradient(800px 420px at 50% 55%, rgba(0, 0, 0, 0.0), rgba(0, 0, 0, 0.55)),
     url("/table.svg") center/cover no-repeat;
@@ -774,7 +776,7 @@ select {
 
 .seat {
   position: absolute;
-  width: 176px;
+  width: var(--seatW);
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
@@ -783,7 +785,7 @@ select {
 }
 
 .seatBubble {
-  width: 176px;
+  width: var(--seatW);
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.18);
@@ -803,8 +805,8 @@ select {
 }
 
 .avatar {
-  width: 36px;
-  height: 36px;
+  width: var(--avatarW);
+  height: var(--avatarW);
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background:
@@ -867,6 +869,21 @@ select {
   display: flex;
   gap: 8px;
   justify-content: center;
+}
+
+.seatBubble .card,
+.seatBubble .cardBack {
+  width: 56px;
+  height: 78px;
+}
+
+@media (max-width: 980px) {
+  .seatLayer {
+    height: 410px;
+  }
+  .tableStage {
+    min-height: 620px;
+  }
 }
 
 .card {

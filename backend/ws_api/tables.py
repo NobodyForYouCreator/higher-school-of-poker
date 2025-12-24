@@ -77,6 +77,8 @@ def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict
     best_hand_rank: str | None = None
     best_hand_cards: list[str] = []
 
+    reveal_all = show_all
+
     if game is not None:
         phase = str(getattr(game.phase, "value", "preflop"))
         pot = int(getattr(game, "pot", 0))
@@ -84,6 +86,8 @@ def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict
         current_bet = int(getattr(game, "current_bet", 0))
         hand_active = bool(getattr(game, "hand_active", False))
         winners = [int(p.user_id) for p in getattr(game, "winners", []) or []]
+        if phase == "finished" and winners:
+            reveal_all = True
         best = getattr(game, "best_hand", None)
         if best is not None:
             best_hand_rank = str(
@@ -105,7 +109,7 @@ def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict
     players: list[dict[str, Any]] = []
     for p in table.public_players():
         hole_cards = [str(card) for card in getattr(p, "hole_cards", [])]
-        if not (show_all or p.user_id == viewer_id):
+        if not (reveal_all or p.user_id == viewer_id):
             hole_cards = []
 
         player_entry: dict[str, Any] = {

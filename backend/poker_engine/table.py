@@ -97,7 +97,7 @@ class Table:
         return list(self.spectators)
 
     def is_effectively_empty(self) -> bool:
-        return not self.public_players() and not self.spectators
+        return not self.players and not self.spectators
 
     def _evict_pending_leavers(self) -> None:
         if not self._pending_leave_user_ids:
