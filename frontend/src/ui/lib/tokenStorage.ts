@@ -12,15 +12,14 @@ export const tokenStorage = {
     try {
       localStorage.setItem(KEY, token);
     } catch {
-      // ignore
+      return;
     }
   },
   clear() {
     try {
       localStorage.removeItem(KEY);
     } catch {
-      // ignore
+      return;
     }
   },
 };
-

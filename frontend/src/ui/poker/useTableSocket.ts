@@ -18,7 +18,6 @@ export function useTableSocket(tableId: string | null, token: string | null) {
     const base = wsBaseUrl().replace(/\/$/, "");
     const t = encodeURIComponent(token);
     const id = encodeURIComponent(tableId);
-    // Some deployments mount ws under `/ws/...`, others under `/api/ws/...`.
     return [`${base}/ws/tables/${id}?token=${t}`, `${base}/api/ws/tables/${id}?token=${t}`];
   }, [tableId, token]);
 
@@ -51,7 +50,6 @@ export function useTableSocket(tableId: string | null, token: string | null) {
       if (!openedRef.current) {
         if (urls.length > 1 && attemptRef.current < urls.length - 1) {
           attemptRef.current += 1;
-          // Retry immediately with the fallback path.
           connect();
           return;
         }
@@ -77,7 +75,7 @@ export function useTableSocket(tableId: string | null, token: string | null) {
           setLastError(code ? `${code}: ${message}` : message);
         }
       } catch {
-        // ignore
+        return;
       }
     };
   }, [urls]);

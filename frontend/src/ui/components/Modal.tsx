@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import Button from "@/ui/kit/Button";
 
 export default function Modal({
   title,
@@ -23,13 +24,12 @@ export default function Modal({
         <div className="modalHeader">
           <div className="modalTitle">{title}</div>
           <div className="spacer" />
-          <button className="btn btnGhost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Закрыть
-          </button>
+          </Button>
         </div>
         <div className="modalBody">{children}</div>
       </div>
     </div>
   );
 }
-

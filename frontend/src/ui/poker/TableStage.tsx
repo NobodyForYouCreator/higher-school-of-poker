@@ -2,16 +2,13 @@ import React, { useMemo } from "react";
 import CardView from "@/ui/poker/CardView";
 import type { TableState } from "@/ui/poker/types";
 import { seatPositions } from "@/ui/poker/seatLayout";
+import Badge from "@/ui/kit/Badge";
 
 function statusDotClass(playerStatus: string, isTurn: boolean) {
   if (isTurn) return "dot dotTurn";
   const lowered = (playerStatus || "").toLowerCase();
   if (lowered.includes("fold") || lowered.includes("out")) return "dot dotOut";
   return "dot";
-}
-
-function shortId(id: number) {
-  return `#${id}`;
 }
 
 export default function TableStage({
@@ -33,16 +30,14 @@ export default function TableStage({
     <div className="tableStage">
       <div className="tableHud">
         <div className="tableCenter">
-          <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
-            <span className="badge">Фаза: {state.phase}</span>
-            {state.current_player_id ? (
-              <span className="badge badgeGood">Ходит: {displayName(state.current_player_id)}</span>
-            ) : null}
-            {state.current_bet !== null ? <span className="badge badgeWarn">Текущая ставка: {state.current_bet}</span> : null}
-            <span className="badge badgeWarn mono">Пот: {state.pot}</span>
-            {state.phase === "finished" && winners.length ? (
-              <span className="badge badgeGood">Победил(и): {winners.map(displayName).join(", ")}</span>
-            ) : null}
+          <div className="tableHudRow">
+            <Badge>Фаза: {state.phase}</Badge>
+            {state.current_player_id ? <Badge tone="good">Ходит: {displayName(state.current_player_id)}</Badge> : null}
+            {state.current_bet !== null ? <Badge tone="warn">Текущая ставка: {state.current_bet}</Badge> : null}
+            <Badge tone="warn" className="mono">
+              Пот: {state.pot}
+            </Badge>
+            {state.phase === "finished" && winners.length ? <Badge tone="good">Победил(и): {winners.map(displayName).join(", ")}</Badge> : null}
           </div>
 
           <div className="boardRow" aria-label="Board cards">
@@ -62,7 +57,7 @@ export default function TableStage({
             const isMe = myId === p.user_id;
             return (
               <div key={p.user_id} className="seat" style={{ left, top }}>
-                <div className="seatBubble" style={isMe ? { borderColor: "rgba(124,92,255,.55)" } : undefined}>
+                <div className={isMe ? "seatBubble seatBubbleMe" : "seatBubble"}>
                   <div className="seatTop">
                     <div className="avatar" />
                     <div>

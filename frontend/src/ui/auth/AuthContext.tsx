@@ -8,6 +8,7 @@ type AuthStatus = "loading" | "guest" | "authed";
 export type Me = {
   id: number;
   username: string;
+  balance: number;
 };
 
 type RegisterResponse = {
@@ -108,4 +109,3 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
-

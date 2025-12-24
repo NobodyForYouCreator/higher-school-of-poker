@@ -16,9 +16,9 @@ type ToastContextValue = {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 function toneBadge(tone?: Toast["tone"]) {
-  if (tone === "good") return "badge badgeGood";
-  if (tone === "warn") return "badge badgeWarn";
-  if (tone === "bad") return "badge badgeBad";
+  if (tone === "good") return "badge badge-good";
+  if (tone === "warn") return "badge badge-warn";
+  if (tone === "bad") return "badge badge-bad";
   return "badge";
 }
 
@@ -60,4 +60,3 @@ export function useToasts() {
   if (!ctx) throw new Error("useToasts must be used within ToastProvider");
   return ctx;
 }
-

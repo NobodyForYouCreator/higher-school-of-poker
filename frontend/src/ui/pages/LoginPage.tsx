@@ -1,9 +1,14 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Segmented from "@/ui/components/Segmented";
 import { ApiError } from "@/ui/lib/http";
 import { useAuth } from "@/ui/auth/AuthContext";
 import { useToasts } from "@/ui/toasts/ToastContext";
+import { apiBaseUrl } from "@/ui/lib/env";
+import Button from "@/ui/kit/Button";
+import Input from "@/ui/kit/Input";
+import Badge from "@/ui/kit/Badge";
+import { Panel, PanelBody, PanelHeader, PanelSubtitle, PanelTitle } from "@/ui/kit/Panel";
 
 type Mode = "login" | "register";
 
@@ -11,6 +16,7 @@ export default function LoginPage() {
   const auth = useAuth();
   const toasts = useToasts();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
@@ -18,17 +24,40 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const header = useMemo(() => {
-    if (mode === "login") return { title: "Вход", sub: "Вернём вас за стол за пару секунд." };
-    return { title: "Регистрация", sub: "Создайте аккаунт и начните игру." };
+    if (mode === "login") return { title: "Вход", sub: "Один шаг до стола." };
+    return { title: "Регистрация", sub: "Создайте аккаунт и получите стартовый баланс." };
   }, [mode]);
 
+  const redirectTo = useMemo(() => {
+    const raw = (location.state as { from?: string } | null)?.from;
+    if (!raw) return "/";
+    if (typeof raw !== "string") return "/";
+    if (!raw.startsWith("/")) return "/";
+    return raw;
+  }, [location.state]);
+
+  const submit = useCallback(async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      if (mode === "login") await auth.login(username.trim(), password);
+      else await auth.register(username.trim(), password);
+      navigate(redirectTo);
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : "Не удалось выполнить запрос";
+      toasts.push({ title: "Ошибка", message: msg, tone: "bad" });
+    } finally {
+      setLoading(false);
+    }
+  }, [auth, loading, mode, navigate, password, redirectTo, toasts, username]);
+
   return (
-    <div className="grid2">
-      <div className="panel">
-        <div className="panelHeader">
+    <div className="pageGrid">
+      <Panel>
+        <PanelHeader>
           <div>
-            <div className="panelTitle">{header.title}</div>
-            <div className="hint">{header.sub}</div>
+            <PanelTitle>{header.title}</PanelTitle>
+            <PanelSubtitle>{header.sub}</PanelSubtitle>
           </div>
           <Segmented<Mode>
             value={mode}
@@ -38,17 +67,22 @@ export default function LoginPage() {
             ]}
             onChange={setMode}
           />
-        </div>
-        <div className="panelBody">
-          <div style={{ display: "grid", gap: 12 }}>
-            <label>
-              <div className="hint">Username</div>
-              <input className="input" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+        </PanelHeader>
+        <PanelBody>
+          <form
+            className="form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
+            <label className="field">
+              <div className="fieldLabel">Username</div>
+              <Input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
             </label>
-            <label>
-              <div className="hint">Password</div>
-              <input
-                className="input"
+            <label className="field">
+              <div className="fieldLabel">Password</div>
+              <Input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type="password"
@@ -56,54 +90,65 @@ export default function LoginPage() {
               />
             </label>
 
-            <div className="row">
-              <button
-                className="btn btnPrimary"
+            <div className="row wrap">
+              <Button
+                variant="primary"
+                type="submit"
                 disabled={loading || username.trim().length < 2 || password.length < 3}
-                onClick={async () => {
-                  setLoading(true);
-                  try {
-                    if (mode === "login") await auth.login(username.trim(), password);
-                    else await auth.register(username.trim(), password);
-                    navigate("/");
-                  } catch (e) {
-                    const msg = e instanceof ApiError ? e.message : "Не удалось выполнить запрос";
-                    toasts.push({ title: "Ошибка", message: msg, tone: "bad" });
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
+                onClick={() => void submit()}
               >
-                {loading ? "..." : mode === "login" ? "Войти" : "Создать аккаунт"}
-              </button>
+                {mode === "login" ? "Войти" : "Создать аккаунт"}
+              </Button>
 
               <div className="spacer" />
-              {auth.status === "authed" ? <span className="badge badgeGood">Вы уже вошли</span> : null}
+              {auth.status === "authed" ? <Badge tone="good">Вы уже вошли</Badge> : null}
             </div>
 
             <div className="hint">
-              API по умолчанию: <span className="mono">http://localhost:8000</span> (можно изменить через{" "}
-              <span className="mono">VITE_API_URL</span>).
+              API: <span className="mono">{apiBaseUrl()}</span>
+            </div>
+          </form>
+        </PanelBody>
+      </Panel>
+
+      <Panel>
+        <PanelHeader>
+          <PanelTitle>Как это работает</PanelTitle>
+          <Badge>REST + WebSocket</Badge>
+        </PanelHeader>
+        <PanelBody>
+          <div className="steps">
+            <div className="step">
+              <div className="stepNum">1</div>
+              <div>
+                <div className="stepTitle">Войдите</div>
+                <div className="stepText">Сессия хранится в браузере, можно перезагружать страницу.</div>
+              </div>
+            </div>
+            <div className="step">
+              <div className="stepNum">2</div>
+              <div>
+                <div className="stepTitle">Выберите стол</div>
+                <div className="stepText">В лобби видны публичные столы и их заполненность.</div>
+              </div>
+            </div>
+            <div className="step">
+              <div className="stepNum">3</div>
+              <div>
+                <div className="stepTitle">Сядьте игроком или смотрите</div>
+                <div className="stepText">Игрок делает buy-in, зритель может включить показ карт.</div>
+              </div>
+            </div>
+            <div className="step">
+              <div className="stepNum">4</div>
+              <div>
+                <div className="stepTitle">Играйте</div>
+                <div className="stepText">Ходы идут через WebSocket, состояние обновляется мгновенно.</div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panelHeader">
-          <div className="panelTitle">Как играть</div>
-          <span className="badge">WS + REST</span>
-        </div>
-        <div className="panelBody">
-          <div className="muted" style={{ lineHeight: 1.6 }}>
-            <div>1) Войдите / зарегистрируйтесь</div>
-            <div>2) В лобби выберите стол или создайте новый</div>
-            <div>3) На странице стола — сядьте игроком или зайдите зрителем</div>
-            <div>4) Ходы идут через WebSocket, состояние обновляется мгновенно</div>
-          </div>
-        </div>
-      </div>
+        </PanelBody>
+      </Panel>
     </div>
   );
 }
-

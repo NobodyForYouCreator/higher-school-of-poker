@@ -5,6 +5,10 @@ import { useAuth } from "@/ui/auth/AuthContext";
 import { ApiError, apiGet, apiPost } from "@/ui/lib/http";
 import type { TableSummary } from "@/ui/poker/types";
 import { useToasts } from "@/ui/toasts/ToastContext";
+import Button from "@/ui/kit/Button";
+import Input from "@/ui/kit/Input";
+import Badge from "@/ui/kit/Badge";
+import { Panel, PanelBody, PanelHeader, PanelSubtitle, PanelTitle } from "@/ui/kit/Panel";
 
 type CreatePayload = {
   max_players: number;
@@ -21,11 +25,11 @@ export default function LobbyPage() {
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [create, setCreate] = useState<CreatePayload>({ max_players: 6, buy_in: 5000, private: false });
+  const [query, setQuery] = useState("");
 
-  const canUseTables = auth.status === "authed";
+  const isAuthed = auth.status === "authed";
 
   const refresh = useCallback(async () => {
-    if (!canUseTables) return;
     setLoading(true);
     try {
       const list = await apiGet<TableSummary[]>("/tables", auth.token);
@@ -36,7 +40,7 @@ export default function LobbyPage() {
     } finally {
       setLoading(false);
     }
-  }, [auth.token, canUseTables, toasts]);
+  }, [auth.token, toasts]);
 
   useEffect(() => {
     void refresh();
@@ -48,23 +52,35 @@ export default function LobbyPage() {
     return null;
   }, [loading, tables.length]);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return tables;
+    return tables.filter((t) => String(t.id).includes(q));
+  }, [query, tables]);
+
   return (
-    <div className="grid2">
-      <div className="panel">
-        <div className="panelHeader">
+    <div className="pageGrid">
+      <Panel>
+        <PanelHeader>
           <div>
-            <div className="panelTitle">Лобби</div>
-            <div className="hint">Выберите стол или создайте новый</div>
+            <PanelTitle>Лобби</PanelTitle>
+            <PanelSubtitle>Выберите стол или создайте новый</PanelSubtitle>
           </div>
-          <div className="row">
-            <button className="btn" disabled={!canUseTables || loading} onClick={() => void refresh()}>
+          <div className="row wrap">
+            {isAuthed ? (
+              <Badge className="mono" tone="good">
+                {auth.user?.balance ?? 0} фишек
+              </Badge>
+            ) : (
+              <Badge tone="warn">Гость</Badge>
+            )}
+            <Button disabled={loading} onClick={() => void refresh()}>
               Обновить
-            </button>
-            <button
-              className="btn btnPrimary"
-              disabled={!canUseTables}
+            </Button>
+            <Button
+              variant="primary"
               onClick={() => {
-                if (!canUseTables) {
+                if (!isAuthed) {
                   navigate("/login");
                   return;
                 }
@@ -72,76 +88,103 @@ export default function LobbyPage() {
               }}
             >
               Создать стол
-            </button>
+            </Button>
           </div>
-        </div>
-        <div className="panelBody">
-          {auth.status !== "authed" ? (
-            <div className="muted">
-              Для просмотра и создания столов нужно войти.{" "}
-              <button className="btn btnPrimary" onClick={() => navigate("/login")}>
-                Войти
-              </button>
+        </PanelHeader>
+        <PanelBody>
+          <div className="row wrap">
+            <div className="spacer" />
+            <div className="fieldInline">
+              <div className="fieldLabel">Поиск</div>
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="id стола" />
             </div>
-          ) : (
-            <div className="tableList">
-              {emptyState ? <div className="muted">{emptyState}</div> : null}
-              {tables.map((t) => (
-                <div key={t.id} className="tableRow">
-                  <div>
-                    <div className="tableName">Стол #{t.id}</div>
-                    <div className="tableMeta">
-                      <span className="badge">{t.private ? "Приватный" : "Публичный"}</span>
-                      <span className="badge">Buy-in: {t.buy_in}</span>
-                      <span className="badge">
-                        Игроки: {t.players_count}/{t.max_players}
-                      </span>
-                      <span className="badge">Зрители: {t.spectators_count}</span>
-                    </div>
-                  </div>
+          </div>
 
-                  <div className="muted">
-                    <div className="hint">Вход</div>
-                    <div>Через WS на столе</div>
-                  </div>
-                  <div className="muted">
-                    <div className="hint">Ставки</div>
-                    <div className="mono">BB: 100</div>
-                  </div>
-
-                  <div className="row" style={{ justifyContent: "flex-end", gap: 10 }}>
-                    <button className="btn" onClick={() => navigate(`/tables/${t.id}`)}>
-                      Открыть
-                    </button>
+          <div className="tableList">
+            {emptyState ? <div className="muted">{emptyState}</div> : null}
+            {filtered.map((t) => (
+              <div key={t.id} className="tableCard">
+                <div className="tableCardMain">
+                  <div className="tableCardTitle">Стол #{t.id}</div>
+                  <div className="tableCardMeta">
+                    <Badge tone={t.private ? "warn" : "neutral"}>{t.private ? "Приватный" : "Публичный"}</Badge>
+                    <Badge className="mono">Buy-in: {t.buy_in}</Badge>
+                    <Badge>
+                      Игроки: {t.players_count}/{t.max_players}
+                    </Badge>
+                    <Badge>Зрители: {t.spectators_count}</Badge>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panelHeader">
-          <div className="panelTitle">Советы</div>
-          <span className="badge">UX</span>
-        </div>
-        <div className="panelBody">
-          <div className="muted" style={{ lineHeight: 1.6 }}>
-            <div>• Хотите видеть все карты? Зайдите на стол зрителем и включите «Показывать карты».</div>
-            <div>• Если раздача ещё не началась — первый ход запускает её автоматически.</div>
-            <div>• Если вы закрыли вкладку стола, сервер автоматически убирает вас со стола.</div>
+                <div className="tableCardSide">
+                  <div className="hint">Блайнды</div>
+                  <div className="mono">SB 50 · BB 100</div>
+                </div>
+                <div className="tableCardActions">
+                  <Button
+                    onClick={() => {
+                      if (!isAuthed) navigate("/login", { state: { from: `/tables/${t.id}` } });
+                      else navigate(`/tables/${t.id}`);
+                    }}
+                  >
+                    Открыть
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      </div>
+        </PanelBody>
+      </Panel>
+
+      <Panel>
+        <PanelHeader>
+          <PanelTitle>Подсказки</PanelTitle>
+          <Badge>Игровая логика</Badge>
+        </PanelHeader>
+        <PanelBody>
+          <div className="noteList">
+            <div className="note">Раздача стартует автоматически, когда за столом минимум 2 игрока.</div>
+            <div className="note">Если вы зритель, можно включить показ карт.</div>
+            <div className="note">Если вы закрыли вкладку, сервер уберёт вас со стола спустя небольшую паузу.</div>
+          </div>
+          {!isAuthed ? (
+            <div className="callout">
+              <div>
+                <div className="calloutTitle">Нужен аккаунт</div>
+                <div className="calloutText">Чтобы сесть за стол, нужно войти.</div>
+              </div>
+              <div className="spacer" />
+              <Button variant="primary" onClick={() => navigate("/login")}>
+                Войти
+              </Button>
+            </div>
+          ) : null}
+        </PanelBody>
+      </Panel>
 
       {showCreate ? (
         <Modal title="Создать стол" onClose={() => setShowCreate(false)}>
-          <div style={{ display: "grid", gap: 12 }}>
-            <label>
-              <div className="hint">Max players (2..9)</div>
-              <input
-                className="input mono"
+          <form
+            className="form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void (async () => {
+                try {
+                  const created = await apiPost<TableSummary, CreatePayload>("/tables/create", create, auth.token);
+                  setShowCreate(false);
+                  toasts.push({ title: "Стол создан", message: `Стол #${created.id}`, tone: "good" });
+                  await refresh();
+                  navigate(`/tables/${created.id}`);
+                } catch (err) {
+                  const msg = err instanceof ApiError ? err.message : "Не удалось создать стол";
+                  toasts.push({ title: "Ошибка", message: msg, tone: "bad" });
+                }
+              })();
+            }}
+          >
+            <label className="field">
+              <div className="fieldLabel">Max players (2..9)</div>
+              <Input
+                className="mono"
                 value={create.max_players}
                 type="number"
                 min={2}
@@ -149,17 +192,17 @@ export default function LobbyPage() {
                 onChange={(e) => setCreate((p) => ({ ...p, max_players: Number(e.target.value) }))}
               />
             </label>
-            <label>
-              <div className="hint">Buy-in</div>
-              <input
-                className="input mono"
+            <label className="field">
+              <div className="fieldLabel">Buy-in</div>
+              <Input
+                className="mono"
                 value={create.buy_in}
                 type="number"
                 min={0}
                 onChange={(e) => setCreate((p) => ({ ...p, buy_in: Number(e.target.value) }))}
               />
             </label>
-            <label className="row" style={{ alignItems: "center", gap: 10 }}>
+            <label className="toggleRow">
               <input
                 type="checkbox"
                 checked={create.private}
@@ -167,33 +210,19 @@ export default function LobbyPage() {
               />
               <span>Приватный стол</span>
             </label>
-            <div className="row">
-              <button
-                className="btn btnPrimary"
-                onClick={async () => {
-                  try {
-                    const created = await apiPost<TableSummary, CreatePayload>("/tables/create", create, auth.token);
-                    setShowCreate(false);
-                    toasts.push({ title: "Стол создан", message: `Стол #${created.id}`, tone: "good" });
-                    await refresh();
-                    navigate(`/tables/${created.id}`);
-                  } catch (e) {
-                    const msg = e instanceof ApiError ? e.message : "Не удалось создать стол";
-                    toasts.push({ title: "Ошибка", message: msg, tone: "bad" });
-                  }
-                }}
+            <div className="row wrap">
+              <Button
+                variant="primary"
+                type="submit"
               >
                 Создать
-              </button>
+              </Button>
               <div className="spacer" />
-              <button className="btn" onClick={() => setShowCreate(false)}>
-                Отмена
-              </button>
+              <Button onClick={() => setShowCreate(false)}>Отмена</Button>
             </div>
-          </div>
+          </form>
         </Modal>
       ) : null}
     </div>
   );
 }
-
