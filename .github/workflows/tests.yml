@@ -2,83 +2,43 @@ name: tests
 
 on:
   push:
+    branches: ["**"]
   pull_request:
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  unit:
-    runs-on: self-hosted
+  pytest:
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Debug runner
-        shell: bash
-        run: |
-          set -euxo pipefail
-          uname -a
-          id
-          pwd
-          ls -la
-          which python || true
-          which python3 || true
-          python --version || true
-          python3 --version || true
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
 
-      # Выбираем интерпретатор. Приоритет – python3.12.
-      - name: Select Python
-        shell: bash
+      - name: Install Poetry
         run: |
-          set -euxo pipefail
-          if command -v /opt/ispmanager/python3.12/bin/python3.12 >/dev/null 2>&1; then
-            echo "PYTHON=/opt/ispmanager/python3.12/bin/python3.12" >> "$GITHUB_ENV"
-          elif command -v /opt/ispmanager/python3.12/bin/python3 >/dev/null 2>&1; then
-            echo "PYTHON=python3" >> "$GITHUB_ENV"
-          else
-            echo "No python3 found on self-hosted runner. Install Python 3.12 (recommended) and retry." >&2
-            exit 1
-          fi
+          python -m pip install --upgrade pip
+          python -m pip install "poetry==1.8.2"
 
-      - name: Ensure pip + pipx
-        shell: bash
+      - name: Configure Poetry
         run: |
-          set -euxo pipefail
-          $PYTHON -m ensurepip --upgrade || true
-          $PYTHON -m pip install --upgrade pip
-          $PYTHON -m pip install --upgrade pipx
-          $PYTHON -m pip ensurepath || true
-
-      - name: Install Poetry (pipx)
-        shell: bash
-        run: |
-          set -euxo pipefail
-          # ставим (или обновляем) poetry изолированно
-          if command -v poetry >/dev/null 2>&1; then
-            poetry --version
-          else
-            $PYTHON -m pip install poetry
-          fi
+          poetry config virtualenvs.in-project true
           poetry --version
 
-      - name: Cache Poetry + pip + venv
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pypoetry
-            ~/.cache/pip
-            .venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
-
-      - name: Install deps
-        shell: bash
+      - name: Install dependencies
         run: |
-          set -euxo pipefail
-          poetry config virtualenvs.in-project true
-          poetry env use "$PYTHON"
-          poetry install --no-interaction
+          poetry install --with dev
 
       - name: Run tests
-        shell: bash
         run: |
-          set -euxo pipefail
-          poetry run pytest -q
+          poetry run pytest
+
