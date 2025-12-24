@@ -17,11 +17,21 @@ _API_PREFIX = settings.api_prefix.rstrip("/") or ""
 PUBLIC_PATHS: set[str] = {
     f"{_API_PREFIX}/auth/register",
     f"{_API_PREFIX}/auth/login",
-    f"{_API_PREFIX}/health",
     "/docs",
     "/openapi.json",
     "/redoc",
 }
+
+PUBLIC_PREFIXES: tuple[str, ...] = (f"{_API_PREFIX}/health",)
+
+
+def _is_public_path(path: str) -> bool:
+    if path in PUBLIC_PATHS:
+        return True
+    for prefix in PUBLIC_PREFIXES:
+        if path == prefix or path.startswith(prefix + "/"):
+            return True
+    return False
 
 
 async def jwt_middleware(
@@ -31,7 +41,7 @@ async def jwt_middleware(
     if request.method.upper() == "OPTIONS":
         return await call_next(request)
 
-    if request.url.path in PUBLIC_PATHS:
+    if _is_public_path(request.url.path):
         return await call_next(request)
 
     auth_header: str | None = request.headers.get("Authorization")
