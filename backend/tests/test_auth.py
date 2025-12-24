@@ -66,7 +66,7 @@ def test_register_duplicate_username(client: TestClient) -> None:
 
     duplicate = client.post("/api/auth/register", json=payload)
     assert duplicate.status_code == 400
-    assert duplicate.json()["detail"] == "Username already exists"
+    assert duplicate.json()["detail"] == {"code": "username_taken", "message": "Username already exists"}
 
 
 def test_login_invalid_password(client: TestClient) -> None:
@@ -74,14 +74,13 @@ def test_login_invalid_password(client: TestClient) -> None:
 
     login = client.post("/api/auth/login", json={"login": "bob", "password": "wrong"})
     assert login.status_code == 401
-    assert login.json()["detail"] in ("Invalid login or password", "Invalid username or password")
+    assert login.json()["detail"] == {"code": "invalid_credentials", "message": "Invalid username or password"}
 
 
 def test_me_requires_auth_header(client: TestClient) -> None:
     response = client.get("/api/auth/me")
     assert response.status_code == 401
-
-    try:
-        assert response.json()["detail"] == "Missing or invalid authorization header"
-    except Exception:
-        assert response.text == "Missing or invalid authorization header"
+    assert response.json()["detail"] == {
+        "code": "missing_auth_header",
+        "message": "Missing or invalid authorization header",
+    }
