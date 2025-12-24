@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Set
+from typing import Any, List, Optional, Set
 
 from backend.poker_engine.game_state import GameState, PlayerAction
 from backend.poker_engine.player_state import PlayerState, PlayerStatus
@@ -23,6 +23,20 @@ class Table:
         self.dealer = 0
         self.game_state: Optional[GameState] = None
         self.table_id = table_id
+        self.last_hand_snapshot: Optional[List[dict[str, Any]]] = None
+
+    def _snapshot_last_hand(self) -> None:
+        self.last_hand_snapshot = [
+            {
+                "user_id": int(p.user_id),
+                "position": int(p.position),
+                "stack": int(p.stack),
+                "bet": int(getattr(p, "bet", 0)),
+                "status": str(getattr(p.status, "value", getattr(p, "status", ""))),
+                "hole_cards": [str(c) for c in getattr(p, "hole_cards", [])],
+            }
+            for p in self.players
+        ]
 
     def seat_player(self, user_id: int, stack: int, is_spectator: bool = False) -> PlayerState:
         if is_spectator:
@@ -54,6 +68,7 @@ class Table:
                 pass
             player.stack = 0
             if not bool(getattr(self.game_state, "hand_active", False)):
+                self._snapshot_last_hand()
                 self._advance_dealer_button()
                 self._evict_pending_leavers()
             return cashout
@@ -67,6 +82,7 @@ class Table:
     def start_game(self) -> GameState:
         if len(self.players) < 2:
             raise RuntimeError("At least two players required to start.")
+        self.last_hand_snapshot = None
         self.game_state = GameState(
             players=self.players,
             dealer=self.dealer,
@@ -87,6 +103,7 @@ class Table:
         player = self._get_player_by_id(user_id)
         self.game_state.apply_action(player, action, amount)
         if not self.game_state.hand_active:
+            self._snapshot_last_hand()
             self._advance_dealer_button()
             self._evict_pending_leavers()
 

@@ -37,7 +37,7 @@ _pending_leave_tasks: dict[tuple[int, int], asyncio.Task[None]] = {}
 _pending_next_hand_tasks: dict[int, asyncio.Task[None]] = {}
 
 LEAVE_GRACE_SECONDS = 60
-NEXT_HAND_DELAY_SECONDS = 5
+NEXT_HAND_DELAY_SECONDS = 12
 
 
 async def _credit_balance(user_id: int, amount: int) -> None:
@@ -105,21 +105,39 @@ def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict
     reveal_all = show_all or (game is not None and phase == "finished")
 
     players: list[dict[str, Any]] = []
-    for p in table.public_players():
-        hole_cards = [str(card) for card in getattr(p, "hole_cards", [])]
-        if not (reveal_all or p.user_id == viewer_id):
-            hole_cards = []
+    snapshot = getattr(table, "last_hand_snapshot", None)
+    if game is not None and phase == "finished" and snapshot:
+        for s in snapshot:
+            uid = int(s.get("user_id", 0))
+            hole_cards = list(s.get("hole_cards") or [])
+            if not (reveal_all or uid == viewer_id):
+                hole_cards = []
+            player_entry: dict[str, Any] = {
+                "user_id": uid,
+                "position": int(s.get("position", 0)),
+                "stack": int(s.get("stack", 0)),
+                "bet": int(s.get("bet", 0)),
+                "status": str(s.get("status") or ""),
+            }
+            if hole_cards:
+                player_entry["hole_cards"] = hole_cards
+            players.append(player_entry)
+    else:
+        for p in table.public_players():
+            hole_cards = [str(card) for card in getattr(p, "hole_cards", [])]
+            if not (reveal_all or p.user_id == viewer_id):
+                hole_cards = []
 
-        player_entry: dict[str, Any] = {
-            "user_id": int(p.user_id),
-            "position": int(p.position),
-            "stack": int(p.stack),
-            "bet": int(getattr(p, "bet", 0)),
-            "status": str(getattr(p.status, "value", getattr(p, "status", ""))),
-        }
-        if hole_cards:
-            player_entry["hole_cards"] = hole_cards
-        players.append(player_entry)
+            player_entry: dict[str, Any] = {
+                "user_id": int(p.user_id),
+                "position": int(p.position),
+                "stack": int(p.stack),
+                "bet": int(getattr(p, "bet", 0)),
+                "status": str(getattr(p.status, "value", getattr(p, "status", ""))),
+            }
+            if hole_cards:
+                player_entry["hole_cards"] = hole_cards
+            players.append(player_entry)
 
     return {
         "table_id": str(table_id),
