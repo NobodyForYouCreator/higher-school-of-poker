@@ -1,3 +1,4 @@
+import logging
 from typing import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
@@ -10,6 +11,8 @@ from backend.ws_api.router import router as ws_router
 from backend.services.table_service import TableService
 from backend.services.table_store import table_store
 from backend.ws_api.tables import maybe_start_game, notify_table_changed
+
+logger = logging.getLogger("hsepoker")
 
 app = FastAPI(title=settings.app_name)
 app.state.table_service = TableService(
@@ -27,6 +30,16 @@ app.add_middleware(
 )
 app.include_router(api_router, prefix=settings.api_prefix)
 app.include_router(ws_router)
+
+
+@app.on_event("startup")
+async def _log_settings() -> None:
+    logger.info(
+        "settings env_source=%s api_prefix=%s database_url=%s",
+        settings.env_source(),
+        settings.api_prefix,
+        settings.database_url_redacted(),
+    )
 
 
 @app.middleware("http")
