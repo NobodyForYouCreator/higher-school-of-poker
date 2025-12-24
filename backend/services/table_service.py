@@ -73,22 +73,14 @@ class TableService:
 
     async def leave_table(self, table_id: int, *, user_id: int, db: AsyncSession) -> OkResponse:
         record = self._require(table_id)
-        user = await self._require_user(db, user_id)
-        cashout = record.table.leave(user_id)
-        if cashout:
-            user.balance = int(user.balance) + cashout
-            await db.commit()
+        await self._cashout_user(db, record, user_id)
         self._store.delete_if_empty(table_id)
         await self._notify_table_changed(table_id)
         return OkResponse()
 
     async def spectate_table(self, table_id: int, *, user_id: int, db: AsyncSession) -> OkResponse:
         record = self._require(table_id)
-        user = await self._require_user(db, user_id)
-        cashout = record.table.leave(user_id)
-        if cashout:
-            user.balance = int(user.balance) + cashout
-            await db.commit()
+        await self._cashout_user(db, record, user_id)
         record.table.seat_player(user_id, record.buy_in, is_spectator=True)
         await self._notify_table_changed(table_id)
         return OkResponse()
@@ -105,6 +97,15 @@ class TableService:
         if user is None:
             raise UserNotFoundError("User not found")
         return user
+
+    async def _cashout_user(self, db: AsyncSession, record: TableRecord, user_id: int) -> int:
+        user = await self._require_user(db, user_id)
+        cashout = record.table.leave(user_id)
+        if not cashout:
+            return 0
+        user.balance = int(user.balance) + cashout
+        await db.commit()
+        return cashout
 
     @staticmethod
     def _serialize_summary(table_id: int, record: TableRecord) -> TableSummary:
