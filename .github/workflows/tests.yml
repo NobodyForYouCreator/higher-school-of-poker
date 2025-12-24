@@ -3,7 +3,33 @@ name: tests
 on:
   push:
     branches: ["**"]
+    paths:
+      - backend/**
+      - pyproject.toml
+      - poetry.lock
+      - alembic.ini
+      - pytest.ini
+      - .coveragerc
+      - .flake8
+      - mypy.ini
+      - .github/workflows/tests.yml
   pull_request:
+    paths:
+      - backend/**
+      - pyproject.toml
+      - poetry.lock
+      - alembic.ini
+      - pytest.ini
+      - .coveragerc
+      - .flake8
+      - mypy.ini
+      - .github/workflows/tests.yml
+  workflow_dispatch:
+    inputs:
+      deploy:
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -53,3 +79,42 @@ jobs:
       - name: Run tests
         run: |
           "$PYTHON" -m poetry run pytest
+
+  deploy_backend:
+    needs: pytest
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 20
+    environment: hsepoker-prod
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'workflow_dispatch' && inputs.deploy == true)
+
+    env:
+      DEPLOY_PATH: /var/www/www-root/data/www/hsepoker.ru
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy backend
+        run: |
+          mkdir -p "$DEPLOY_PATH"
+          command -v rsync >/dev/null 2>&1 || (echo "rsync not found" && exit 1)
+          test -w "$DEPLOY_PATH" || (echo "No write permission for $DEPLOY_PATH" && ls -la "$DEPLOY_PATH" && exit 1)
+          rsync -a --delete \
+            --exclude '__pycache__/' \
+            --exclude '*.pyc' \
+            --exclude '.pytest_cache/' \
+            --exclude '.mypy_cache/' \
+            --exclude '.venv/' \
+            backend/ "$DEPLOY_PATH/backend/"
+          rsync -a \
+            alembic.ini \
+            pyproject.toml \
+            poetry.lock \
+            docker-compose.yml \
+            pytest.ini \
+            .coveragerc \
+            .flake8 \
+            mypy.ini \
+            "$DEPLOY_PATH/"
