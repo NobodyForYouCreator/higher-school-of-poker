@@ -934,21 +934,31 @@ select {
   position: absolute;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
   font-weight: 850;
   letter-spacing: 0.1px;
   line-height: 1;
   white-space: nowrap;
 }
 
-.cardCornerTop {
+.cardCornerRankTopLeft {
+  top: 6px;
+  left: 6px;
+}
+
+.cardCornerSuitTopRight {
   top: 6px;
   right: 6px;
 }
 
-.cardCornerBottomLeft {
+.cardCornerSuitBottomLeft {
   bottom: 6px;
   left: 6px;
+  transform: rotate(180deg);
+}
+
+.cardCornerRankBottomRight {
+  bottom: 6px;
+  right: 6px;
   transform: rotate(180deg);
 }
 
