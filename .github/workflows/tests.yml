@@ -56,7 +56,7 @@ jobs:
           if command -v poetry >/dev/null 2>&1; then
             poetry --version
           else
-            pip install poetry
+            $PYTHON pip install poetry
           fi
           poetry --version
 
