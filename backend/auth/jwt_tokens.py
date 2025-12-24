@@ -3,7 +3,7 @@ from typing import Union
 
 from jose import jwt, JWTError
 
-from backend.rest_api.core import config
+from backend.rest.core import config
 
 ALGORITHM = "HS256"
 

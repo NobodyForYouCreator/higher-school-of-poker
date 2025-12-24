@@ -8,9 +8,9 @@ from backend.auth.hashing import verify_password
 from backend.auth.jwt_tokens import create_access_token
 from backend.database.session import get_db
 from backend.models.user import User
-from backend.rest_api.errors import http_error
-from backend.rest_api.api.deps import get_current_user
-from backend.rest_api.schemas.auth import LoginRequest, MeResponse, RegisterRequest, RegisterResponse
+from backend.rest.errors import http_error
+from backend.rest.api.deps import get_current_user
+from backend.rest.schemas.auth import LoginRequest, MeResponse, RegisterRequest, RegisterResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

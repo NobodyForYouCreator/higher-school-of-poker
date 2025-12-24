@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database.session import get_db
 from backend.models.user import User
 from backend.services.table_service import TableService
-from backend.rest_api.errors import http_error
+from backend.rest.errors import http_error
 
 
 def get_current_user_id(request: Request) -> int:

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Awaitable, Callable
 
-from backend.rest_api.schemas.common import OkResponse
-from backend.rest_api.schemas.table import TableCreateRequest, TableDetail, TableSeat, TableSummary
+from backend.rest.schemas.common import OkResponse
+from backend.rest.schemas.table import TableCreateRequest, TableDetail, TableSeat, TableSummary
 from backend.models.user import User
 from backend.services.table_store import TableRecord, TableStore
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from backend.database.session import get_db
 from backend.models.user import User
-from backend.rest_api.main import app
+from backend.rest.main import app
 
 
 @pytest.fixture()

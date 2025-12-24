@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from backend.models.user import User
-from backend.rest_api.schemas.table import TableCreateRequest
+from backend.rest.schemas.table import TableCreateRequest
 from backend.services.table_service import InsufficientBalanceError, TableNotFoundError, TableService
 from backend.services.table_store import TableStore
 

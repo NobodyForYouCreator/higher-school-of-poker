@@ -7,8 +7,8 @@ from fastapi.responses import JSONResponse
 from jose import JWTError
 
 from backend.auth.jwt_tokens import decode_access_token
-from backend.rest_api.core.config import settings
-from backend.rest_api.schemas.error import ErrorDetail
+from backend.rest.core.config import settings
+from backend.rest.schemas.error import ErrorDetail
 
 AUTH_HEADER_PREFIX = "Bearer "
 

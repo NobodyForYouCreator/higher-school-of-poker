@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database.session import get_db
 from backend.models.user import User
-from backend.rest_api.errors import http_error
-from backend.rest_api.schemas.users import UserPublic
+from backend.rest.errors import http_error
+from backend.rest.schemas.users import UserPublic
 
 router = APIRouter(prefix="/users", tags=["users"])
 

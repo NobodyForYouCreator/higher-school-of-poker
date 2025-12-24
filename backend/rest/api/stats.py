@@ -9,9 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database.session import get_db
 from backend.models.player_stats import PlayerStats
 from backend.models.player_game import PlayerGame
-from backend.rest_api.api.deps import get_current_user_id
-from backend.rest_api.errors import http_error
-from backend.rest_api.schemas.stats import PlayerHistoryEntry, PlayerStatsOut
+from backend.rest.api.deps import get_current_user_id
+from backend.rest.errors import http_error
+from backend.rest.schemas.stats import PlayerHistoryEntry, PlayerStatsOut
 
 
 router = APIRouter(prefix="/stats", tags=["stats"])
