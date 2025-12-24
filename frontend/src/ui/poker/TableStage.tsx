@@ -79,8 +79,8 @@ export default function TableStage({
                   )}
 
                   <div className="seatBottom mono">
-                    <div className="chips">в игре {p.stack}</div>
-                    <div className="bet">ставка {p.bet}</div>
+                    <div className="chips">стек: {p.stack}</div>
+                    <div className="bet">ставка: {p.bet}</div>
                   </div>
                 </div>
               </div>
