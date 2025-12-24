@@ -117,7 +117,8 @@ select {
 .logo {
   width: 34px;
   height: 34px;
-  border-radius: 12px;
+  border-radius: 50%;
+  overflow: hidden;
   object-fit: cover;
   background: rgba(255, 255, 255, 0.06);
   box-shadow: 0 16px 40px rgba(124, 92, 255, 0.25);
