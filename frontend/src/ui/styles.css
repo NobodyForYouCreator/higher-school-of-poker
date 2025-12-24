@@ -931,17 +931,14 @@ select {
   justify-content: space-between;
 }
 
-.cardTop,
-.cardBottom {
+.cardTop {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   font-weight: 850;
   letter-spacing: 0.1px;
-}
-
-.cardBottom {
-  transform: rotate(180deg);
 }
 
 .cardRank {
@@ -959,7 +956,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 34px;
+  font-size: 32px;
   opacity: 0.95;
 }
 

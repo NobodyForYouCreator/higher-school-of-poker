@@ -16,12 +16,7 @@ export default function CardView({ code }: { code: string }) {
           <div className="cardSuit">{suit}</div>
         </div>
         <div className="cardPip">{suit}</div>
-        <div className="cardBottom">
-          <div className="cardRank">{rank}</div>
-          <div className="cardSuit">{suit}</div>
-        </div>
       </div>
     </div>
   );
 }
-

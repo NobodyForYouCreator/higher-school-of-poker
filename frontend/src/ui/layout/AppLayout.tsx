@@ -10,6 +10,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const toasts = useToasts();
   const location = useLocation();
   const navigate = useNavigate();
+  const baseUrl = import.meta.env.BASE_URL ?? "/";
 
   const navItems = useMemo(() => {
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
@@ -24,7 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="topbar">
         <div className="topbarInner">
           <div className="brand" role="banner" onClick={() => navigate("/")}>
-            <img className="logo" src="/smth.png" alt="" />
+            <img className="logo" src={`${baseUrl}smth.png`} alt="" />
             <div>
               <div className="brandTitle">Higher School of Poker</div>
               <div className="brandSub">Лобби · столы · раздачи в реальном времени</div>
