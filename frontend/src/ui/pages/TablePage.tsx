@@ -295,6 +295,10 @@ export default function TablePage() {
                         {currentBet && currentBet > 0 ? "Повысить" : "Ставка"}
                       </Button>
                     </div>
+
+                    <div className="hint">
+                      Новая раздача начинается автоматически. Если у игрока закончились фишки за столом — выйдите и зайдите снова.
+                    </div>
                   </div>
                 </PanelBody>
               </Panel>

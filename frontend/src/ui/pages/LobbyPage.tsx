@@ -80,7 +80,7 @@ export default function LobbyPage() {
                 {auth.user?.balance ?? 0} фишек
               </Badge>
             ) : (
-              <Badge tone="warn">Войдите, чтобы играть</Badge>
+              <Badge tone="warn">Гость</Badge>
             )}
             <Button disabled={loading} onClick={() => void refresh()}>
               Обновить
@@ -155,6 +155,35 @@ export default function LobbyPage() {
               </div>
             ))}
           </div>
+        </PanelBody>
+      </Panel>
+
+      <Panel>
+        <PanelHeader>
+          <div>
+            <PanelTitle>Подсказки</PanelTitle>
+            <PanelSubtitle>Коротко о том, как всё работает</PanelSubtitle>
+          </div>
+          <Badge>игра</Badge>
+        </PanelHeader>
+        <PanelBody>
+          <div className="noteList">
+            <div className="note">Раздача стартует автоматически, когда за столом минимум 2 игрока.</div>
+            <div className="note">Зритель может включить показ карт для всех.</div>
+            <div className="note">Если вы закрыли вкладку, сервер уберёт вас со стола через небольшую паузу.</div>
+          </div>
+          {!isAuthed ? (
+            <div className="callout">
+              <div>
+                <div className="calloutTitle">Нужен аккаунт</div>
+                <div className="calloutText">Чтобы сесть за стол, войдите или зарегистрируйтесь.</div>
+              </div>
+              <div className="spacer" />
+              <Button variant="primary" onClick={() => navigate("/login")}>
+                Войти
+              </Button>
+            </div>
+          ) : null}
         </PanelBody>
       </Panel>
 

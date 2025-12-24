@@ -24,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="topbar">
         <div className="topbarInner">
           <div className="brand" role="banner" onClick={() => navigate("/")}>
-            <div className="logo" aria-hidden="true" />
+            <img className="logo" src="/smth.png" alt="" />
             <div>
               <div className="brandTitle">Higher School of Poker</div>
               <div className="brandSub">Лобби · столы · раздачи в реальном времени</div>
