@@ -20,7 +20,7 @@
 9. [x] Эндпоинт `POST /auth/register` — регистрация.
 10. [x] Эндпоинт `POST /auth/login` — логин.
 11. [x] Эндпоинт `GET /auth/me` — получение профиля.
-12. [ ] Написать тесты на авторизацию.
+12. [x] Написать тесты на авторизацию.
 
 ---
 
@@ -116,19 +116,196 @@
 ## 9. ДОКУМЕНТАЦИЯ (Все вместе) ~4 недели
 
 ### Docs
-66. [ ] Написать архитектурную диаграмму.
-67. [ ] Написать диаграмму взаимодействия WebSocket.
+66. [x] Написать архитектурную диаграмму.
+67. [x] Написать диаграмму взаимодействия WebSocket.
 68. [ ] Нарисовать ER-диаграмму БД.
-69. [ ] Описание API (REST + WS).
-70. [ ] Финальное описание проекта для защиты.
+69. [x] Описание API (REST + WS).
+70. [x] Финальное описание проекта для защиты.
+
+### Архитектурная диаграмма
+
+```text
+Browser (SPA)
+  |
+  v
+Nginx (hsepoker.ru)
+  |-- "/" -----------> Static frontend (index.html + assets)
+  |-- "/api/*" ------> FastAPI (Uvicorn via PM2) -> REST routers
+  |-- "/ws/*" -------> FastAPI (Uvicorn via PM2) -> WS routers
+
+FastAPI
+  REST (/api)
+    - /auth/*  -> users (Postgres)
+    - /tables/* -> TableService -> TableStore (in-memory) + users (balance)
+    - /stats/* -> Postgres (player_stats/player_games/finished_games)
+  WebSocket (/ws/tables/:id)
+    - validates JWT token
+    - reads TableStore (in-memory)
+    - calls GameService -> Poker Engine (Table/GameState)
+    - persists hand results to Postgres
+
+Poker Engine
+  - Table (domain) + GameState (hand lifecycle)
+
+Database (Postgres)
+  - users
+  - player_stats
+  - finished_games
+  - player_games
+
+Migrations (Alembic) -> Postgres schema
+
+CI/CD (GitHub Actions, self-hosted)
+  - checks: pytest + flake8 + mypy
+  - deploy (manual approval): sync backend + sync frontend build to /var/www/...
+```
+
+### Диаграмма взаимодействия WebSocket
+
+```text
+Browser                Nginx                 WS handler             TableStore      GameService      Poker Engine          Postgres
+  |                      |                      |                      |              |               |                   |
+  |--- WS connect ------>|--- upgrade --------->|                      |              |               |                   |
+  |  /ws/tables/:id?jwt  |                      |--- decode jwt ------>|              |               |                   |
+  |                      |                      |--- get table ------->|              |               |                   |
+  |<-- table_state ------|<---------------------|--- build state ------|              |               |                   |
+  |                      |                      |                      |              |               |                   |
+  |--- player_action ----|--------------------->|                      |              |               |                   |
+  |                      |                      |--- apply_action ------------------->|--- Table.apply_action ---------->|
+  |                      |                      |                      |              |               |                   |
+  |                      |                      |<-- updated state ----|              |               |                   |
+  |<-- table_state ------|<---------------------|                      |              |               |                   |
+  |                      |                      |                      |              |               |                   |
+  |                      |                      |  if hand finished:   |              |               |                   |
+  |                      |                      |--- record results -----------------------------------------------> (finished_games/player_games/player_stats)
+  |                      |                      |--- table_state (reveal all hole cards) ------------------------>|
+  |<-- table_state ------|<---------------------|                      |              |               |                   |
+  |                      |                      |--- schedule next hand (delay)                                  |
+  |                      |                      |--- start_hand -------------------------->|--- Table.start_game -------->|
+  |<-- table_state ------|<---------------------|                      |              |               |                   |
+```
+
+### API (REST + WS)
+
+Base URL:
+- REST: `/api`
+- WebSocket: `/ws`
+
+Auth:
+- `POST /api/auth/register` body: `{ "username": string, "password": string }` -> `{ "access_token": string, "token_type": "Bearer" }`
+- `POST /api/auth/login` body: `{ "login": string, "password": string }` (или `{ "username": ... }`) -> `{ "access_token": string, "token_type": "Bearer" }`
+- `GET /api/auth/me` header: `Authorization: Bearer <token>` -> `{ "id": int, "username": string, "balance": int }`
+
+Tables (REST):
+- `GET /api/tables/` -> `TableSummary[]` (приватные столы скрыты)
+- `POST /api/tables/create` body: `{ "max_players": 2..9, "buy_in": int, "private": bool }` -> `TableSummary`
+- `GET /api/tables/{table_id}` -> `TableDetail` (seats)
+- `POST /api/tables/{table_id}/join` auth required -> `{ "ok": true }`
+- `POST /api/tables/{table_id}/leave` auth required -> `{ "ok": true }`
+- `POST /api/tables/{table_id}/spectate` auth required -> `{ "ok": true }`
+
+Users:
+- `GET /api/users/{user_id}` -> `{ "id": int, "username": string }`
+
+Stats:
+- `GET /api/stats/me/stats` auth required -> `PlayerStatsOut`
+- `GET /api/stats/me/history?limit=1..500&offset>=0` auth required -> `PlayerHistoryEntry[]`
+- `GET /api/stats/{user_id}/stats` -> `PlayerStatsOut`
+- `GET /api/stats/{user_id}/history?limit=1..500&offset>=0` -> `PlayerHistoryEntry[]`
+
+Health:
+- `GET /api/health` -> `200 OK`
+- `GET /api/health/settings` -> `{ api_prefix, cors_origins, database_url, env_source }`
+
+Errors (REST):
+- Format: `{"detail":{"code": "<string>", "message": "<string>"}}`
+
+WebSocket:
+- Connect: `ws(s)://<host>/ws/tables/{table_id}?token=<jwt>`
+
+Client -> Server messages:
+- `{ "type": "player_action", "payload": { "action": "fold|check|call|bet|raise|all_in", "amount": number } }`
+- `{ "type": "toggle_show_all", "payload": { "show": boolean } }` (только для зрителей)
+
+Server -> Client messages:
+- `{ "type": "table_state", "payload": TableState }`
+- `{ "type": "error", "code": "<string>", "message": "<string>" }`
+
+TableState (WS):
+- `table_id: string`
+- `phase: string` (`preflop|flop|turn|river|finished`)
+- `hand_active: boolean`
+- `pot: number`
+- `board: string[]`
+- `players: Array<{ user_id:number, position:number, stack:number, bet:number, status:string, hole_cards?:string[] }>`
+- `winners: number[]`
+- `current_player_id: number|null`
+- `current_bet: number|null`
+- `min_bet: number|null`
+
+### Финальное описание проекта (для защиты)
+
+Проект — веб-приложение для игры в Texas Hold’em с лобби столов, игрой в реальном времени через WebSocket и сохранением результатов раздач в БД.
+
+Основные возможности:
+- Регистрация/логин по JWT, профиль пользователя с балансом.
+- Лобби столов: создание (публичный/приватный), вход игроком (buy-in), вход зрителем.
+- Игра за столом в реальном времени: действия игрока отправляются по WS, состояние стола транслируется всем подключённым.
+- По завершении раздачи результаты фиксируются в Postgres: история раздач, статистика игрока.
+- CI/CD: проверки `pytest + flake8 + mypy`, деплой (manual approval) на self-hosted runner.
+
+Технологии:
+- Backend: FastAPI, SQLAlchemy async, Alembic, Postgres, WebSocket.
+- Frontend: React + Vite + TypeScript.
+- Deploy: Nginx + PM2 (Uvicorn), GitHub Actions (self-hosted).
+
+### Запуск проекта с нуля
+
+#### Вариант A — Docker (рекомендуется)
+
+Требования: Docker, Docker Compose.
+
+1) Поднять сервисы:
+   - `docker compose up --build`
+
+2) Применить миграции:
+   - `docker compose exec backend poetry run alembic -c backend/alembic.ini upgrade head`
+
+3) Открыть:
+   - Backend: `http://localhost:8000/api/health`
+
+Frontend в Docker сейчас не поднимается отдельным сервисом. Для удобства в разработке запускай его локально (см. вариант B).
+
+#### Вариант B — Локальная разработка (без Docker)
+
+Требования: Python 3.12, Poetry, Node.js 18+.
+
+1) Запустить Postgres:
+   - либо через Docker: `docker compose up -d db`
+   - либо свой локальный Postgres (важно знать URL)
+
+2) Backend:
+   - `poetry install`
+   - `export DATABASE_URL='postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/poker'`
+   - `poetry run alembic -c backend/alembic.ini upgrade head`
+   - `poetry run uvicorn backend.rest.main:app --reload --host 0.0.0.0 --port 8000`
+
+3) Frontend:
+   - `npm -C frontend ci`
+   - `npm -C frontend run dev`
+   - открыть `http://localhost:5173`
+
+Если фронту нужен явный адрес API/WS, можно задать:
+- `VITE_API_URL` (например `http://localhost:8000/api`)
+- `VITE_WS_URL` (например `ws://localhost:8000/ws`)
 
 
 # Документация проекта
 
 ## Backend
 
--### Запуск (локально)
-    - из корня репозитория: `poetry install` затем `poetry run uvicorn backend.rest_api.main:app --reload --host 0.0.0.0 --port 8000`
+### Запуск (локально)
+    - из корня репозитория: `poetry install` затем `poetry run uvicorn backend.rest.main:app --reload --host 0.0.0.0 --port 8000`
 
 -### Миграции (Alembic)
     - применить миграции: `poetry run alembic upgrade head` (или `python -m alembic upgrade head` если зависимости установлены в venv)
@@ -350,4 +527,4 @@ Vite + React + TypeScript + Node.js
 
 Во время игры пользователь может нажимать разные кнопки будь, то поставить ставку, чекнуть, сдать карты и тп, всё по правилам покера
 
-![](./imgs/table.svg)
+![](./imgs/table.png)

@@ -13,4 +13,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["poetry", "run", "uvicorn", "backend.rest_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["poetry", "run", "uvicorn", "backend.rest.main:app", "--host", "0.0.0.0", "--port", "8000"]
