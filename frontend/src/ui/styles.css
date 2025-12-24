@@ -928,7 +928,6 @@ select {
   position: absolute;
   inset: 0;
   padding: 8px;
-  position: relative;
 }
 
 .cardCorner {
