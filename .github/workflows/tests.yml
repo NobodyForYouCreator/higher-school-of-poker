@@ -31,7 +31,7 @@ jobs:
         run: |
           set -euxo pipefail
           if command -v /opt/ispmanager/python3.12/bin/python3.12 >/dev/null 2>&1; then
-            echo "PYTHON=python3.12" >> "$GITHUB_ENV"
+            echo "PYTHON=/opt/ispmanager/python3.12/bin/python3.12" >> "$GITHUB_ENV"
           elif command -v /opt/ispmanager/python3.12/bin/python3 >/dev/null 2>&1; then
             echo "PYTHON=python3" >> "$GITHUB_ENV"
           else
