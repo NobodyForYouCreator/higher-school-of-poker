@@ -249,7 +249,7 @@ class GameState:
     def _deal_private_cards(self) -> None:
         for _ in range(2):
             for player in self.players:
-                if player.status in (PlayerStatus.SPECTATOR, PlayerStatus.OUT):
+                if player.status in (PlayerStatus.SPECTATOR, PlayerStatus.OUT, PlayerStatus.WAITING):
                     continue
                 player.hole_cards.append(self.deck.draw_card())
 

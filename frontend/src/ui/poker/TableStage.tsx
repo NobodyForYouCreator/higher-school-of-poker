@@ -59,7 +59,9 @@ export default function TableStage({
                       <div className="seatName">
                         {displayName(p.user_id)} {isMe ? "(вы)" : ""}
                       </div>
-                      <div className="seatSub">{p.status === "folded" ? "пас" : p.status === "all_in" ? "ва-банк" : ""}</div>
+                      <div className="seatSub">
+                        {p.status === "folded" ? "пас" : p.status === "all_in" ? "ва-банк" : p.status === "waiting" ? "ожидает" : ""}
+                      </div>
                     </div>
                     <div className="seatBadges">
                       <div className={statusDotClass(p.status, isTurn)} />

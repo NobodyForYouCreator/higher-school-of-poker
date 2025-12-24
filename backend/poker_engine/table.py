@@ -38,7 +38,14 @@ class Table:
             for p in self.players
         ]
 
-    def seat_player(self, user_id: int, stack: int, is_spectator: bool = False) -> PlayerState:
+    def seat_player(
+        self,
+        user_id: int,
+        stack: int,
+        *,
+        is_spectator: bool = False,
+        initial_status: PlayerStatus | None = None,
+    ) -> PlayerState:
         if is_spectator:
             spectator = PlayerState(user_id=user_id, stack=-1, position=-1, status=PlayerStatus.SPECTATOR)
             self.spectators.append(spectator)
@@ -47,7 +54,7 @@ class Table:
         if len(self.players) >= self.max_players:
             raise RuntimeError("The table is full.")
         position = len(self.players)
-        player = PlayerState(user_id=user_id, stack=stack, position=position)
+        player = PlayerState(user_id=user_id, stack=stack, position=position, status=initial_status or PlayerStatus.ACTIVE)
         self.players.append(player)
         return player
 

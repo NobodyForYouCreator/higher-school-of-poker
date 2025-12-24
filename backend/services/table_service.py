@@ -6,6 +6,7 @@ from backend.rest.schemas.common import OkResponse
 from backend.rest.schemas.table import TableCreateRequest, TableDetail, TableSeat, TableSummary
 from backend.models.user import User
 from backend.services.table_store import TableRecord, TableStore
+from backend.poker_engine.player_state import PlayerStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -62,7 +63,8 @@ class TableService:
         if int(user.balance) < int(record.buy_in):
             raise InsufficientBalanceError("Not enough balance for buy-in")
 
-        record.table.seat_player(user_id, record.buy_in)
+        waiting = bool(record.table.game_state is not None and getattr(record.table.game_state, "hand_active", False))
+        record.table.seat_player(user_id, record.buy_in, initial_status=PlayerStatus.WAITING if waiting else None)
         user.balance = int(user.balance) - int(record.buy_in)
         try:
             await db.commit()

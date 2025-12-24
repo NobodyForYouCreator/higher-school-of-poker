@@ -11,6 +11,7 @@ class PlayerStatus(str, Enum):
     ACTIVE = "active"
     FOLDED = "folded"
     ALL_IN = "all_in"
+    WAITING = "waiting"
     OUT = "out"
     SPECTATOR = "spectator"
 
