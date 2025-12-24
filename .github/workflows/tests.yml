@@ -46,7 +46,7 @@ jobs:
           $PYTHON -m ensurepip --upgrade || true
           $PYTHON -m pip install --upgrade pip
           $PYTHON -m pip install --upgrade pipx
-          $PYTHON -m pipx ensurepath || true
+          $PYTHON -m pip ensurepath || true
 
       - name: Install Poetry (pipx)
         shell: bash
@@ -56,7 +56,7 @@ jobs:
           if command -v poetry >/dev/null 2>&1; then
             poetry --version
           else
-            pipx install poetry
+            pip install poetry
           fi
           poetry --version
 
@@ -81,4 +81,4 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          poetry run pytest -q ./backend
+          poetry run pytest -q
