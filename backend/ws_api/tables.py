@@ -37,7 +37,7 @@ _pending_leave_tasks: dict[tuple[int, int], asyncio.Task[None]] = {}
 _pending_next_hand_tasks: dict[int, asyncio.Task[None]] = {}
 
 LEAVE_GRACE_SECONDS = 60
-NEXT_HAND_DELAY_SECONDS = 12
+NEXT_HAND_DELAY_SECONDS = 5
 
 
 async def _credit_balance(user_id: int, amount: int) -> None:
@@ -112,7 +112,7 @@ def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict
             hole_cards = list(s.get("hole_cards") or [])
             if not (reveal_all or uid == viewer_id):
                 hole_cards = []
-            player_entry: dict[str, Any] = {
+            player_entry = {
                 "user_id": uid,
                 "position": int(s.get("position", 0)),
                 "stack": int(s.get("stack", 0)),
@@ -128,7 +128,7 @@ def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict
             if not (reveal_all or p.user_id == viewer_id):
                 hole_cards = []
 
-            player_entry: dict[str, Any] = {
+            player_entry = {
                 "user_id": int(p.user_id),
                 "position": int(p.position),
                 "stack": int(p.stack),
@@ -163,6 +163,21 @@ async def _try_send(conn: _Conn, message: dict[str, Any]) -> bool:
         return False
     except Exception:
         return False
+
+
+async def _broadcast_error(table_id: int, code: str, message: str) -> None:
+    conns_map = _table_conns.get(table_id)
+    if not conns_map:
+        return
+    conns = list(conns_map.values())
+    dead_sockets: list[WebSocket] = []
+    payload = _ws_error(code, message)
+    for conn in conns:
+        ok = await _try_send(conn, payload)
+        if not ok:
+            dead_sockets.append(conn.websocket)
+    for ws in dead_sockets:
+        conns_map.pop(ws, None)
 
 
 async def _broadcast_state(table_id: int) -> None:
@@ -259,11 +274,13 @@ def _schedule_next_hand(table_id: int) -> None:
 
                 eligible = [p for p in table.public_players() if p.stack > 0]
                 if len(eligible) < 2:
+                    await _broadcast_error(table_id, "next_hand_not_started", "Not enough players with chips")
                     return
 
                 try:
                     await _game_service.start_hand(table)
-                except Exception:
+                except Exception as exc:
+                    await _broadcast_error(table_id, "start_hand_failed", str(exc))
                     return
 
                 await _broadcast_state(table_id)
