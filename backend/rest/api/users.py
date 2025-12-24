@@ -14,7 +14,7 @@ async def get_user_public(
     user_id: int,
     session: AsyncSession = Depends(get_db),
 ) -> UserPublic:
-    if user_id <= 0:
+    if user_id < 0:
         raise http_error(status.HTTP_400_BAD_REQUEST, code="invalid_user_id", message="user_id must be positive")
 
     user = await session.get(User, user_id)
