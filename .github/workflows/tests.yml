@@ -30,9 +30,9 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          if command -v python3.12 >/dev/null 2>&1; then
+          if command -v /opt/ispmanager/python3.12/bin/python3.12 >/dev/null 2>&1; then
             echo "PYTHON=python3.12" >> "$GITHUB_ENV"
-          elif command -v python3 >/dev/null 2>&1; then
+          elif command -v /opt/ispmanager/python3.12/bin/python3 >/dev/null 2>&1; then
             echo "PYTHON=python3" >> "$GITHUB_ENV"
           else
             echo "No python3 found on self-hosted runner. Install Python 3.12 (recommended) and retry." >&2
