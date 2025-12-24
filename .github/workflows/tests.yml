@@ -14,25 +14,29 @@ jobs:
     runs-on: [self-hosted, linux]
     timeout-minutes: 20
 
+    env:
+      PYTHON: /opt/ispmanager/python3.12/bin/python3.12
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Check Python
         run: |
-          /opt/ispmanager/python3.12/bin/python3.12 --version
-          /opt/ispmanager/python3.12/bin/python3.12 -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version"
+          test -x "$PYTHON" || (echo "Python not found/executable at $PYTHON" && ls -la "$(dirname "$PYTHON")" && exit 1)
+          "$PYTHON" --version
+          "$PYTHON" -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version"
 
       - name: Install Poetry
         run: |
-          /opt/ispmanager/python3.12/bin/python3.12 -m pip install --upgrade pip
-          /opt/ispmanager/python3.12/bin/python3.12 -m pip install "poetry==1.8.2"
+          "$PYTHON" -m pip install --upgrade pip
+          "$PYTHON" -m pip install "poetry==1.8.2"
 
       - name: Configure Poetry
         run: |
           poetry config virtualenvs.in-project true
           poetry --version
-          poetry env use /opt/ispmanager/python3.12/bin/python3.12
+          poetry env use "$PYTHON"
 
       - name: Install dependencies
         run: |
