@@ -20,19 +20,19 @@ jobs:
 
       - name: Check Python
         run: |
-          python3 --version
-          python3 -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version"
+          /opt/ispmanager/python3.12/bin/python3.12 --version
+          /opt/ispmanager/python3.12/bin/python3.12 -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version"
 
       - name: Install Poetry
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install "poetry==1.8.2"
+          /opt/ispmanager/python3.12/bin/python3.12 -m pip install --upgrade pip
+          /opt/ispmanager/python3.12/bin/python3.12 -m pip install "poetry==1.8.2"
 
       - name: Configure Poetry
         run: |
           poetry config virtualenvs.in-project true
           poetry --version
-          poetry env use "$(command -v python3)"
+          poetry env use /opt/ispmanager/python3.12/bin/python3.12
 
       - name: Install dependencies
         run: |
