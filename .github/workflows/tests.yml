@@ -5,6 +5,7 @@ on:
     branches: ["**"]
     paths:
       - backend/**
+      - frontend/**
       - pyproject.toml
       - poetry.lock
       - alembic.ini
@@ -16,6 +17,7 @@ on:
   pull_request:
     paths:
       - backend/**
+      - frontend/**
       - pyproject.toml
       - poetry.lock
       - alembic.ini
@@ -36,7 +38,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: [self-hosted, linux]
+    outputs:
+      backend_changed: ${{ steps.filter.outputs.backend_changed }}
+      frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: filter
+        shell: bash
+        run: |
+          base=""
+          head="${GITHUB_SHA}"
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            base="${{ github.event.before }}"
+          else
+            base="$(git rev-parse HEAD~1)"
+          fi
+
+          if [[ -z "${base}" ]]; then
+            echo "backend_changed=true" >> "$GITHUB_OUTPUT"
+            echo "frontend_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          files="$(git diff --name-only "${base}" "${head}" || true)"
+          if echo "${files}" | grep -qE '^backend/'; then
+            echo "backend_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "backend_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if echo "${files}" | grep -qE '^frontend/'; then
+            echo "frontend_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   pytest:
+    needs: changes
+    if: needs.changes.outputs.backend_changed == 'true'
     runs-on: [self-hosted, linux]
     timeout-minutes: 20
 
@@ -46,6 +95,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check Python
         run: |
@@ -80,14 +131,40 @@ jobs:
         run: |
           "$PYTHON" -m poetry run pytest
 
+  frontend_build:
+    needs: changes
+    if: needs.changes.outputs.frontend_changed == 'true'
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Node
+        run: |
+          node --version
+          npm --version
+
+      - name: Install deps
+        run: |
+          npm -C frontend ci
+
+      - name: Build
+        run: |
+          npm -C frontend run build
+
   deploy_backend:
-    needs: pytest
+    needs: [changes, pytest]
     runs-on: [self-hosted, linux]
     timeout-minutes: 20
     environment: hsepoker-prod
     if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
-      || (github.event_name == 'workflow_dispatch' && inputs.deploy == true)
+      needs.changes.outputs.backend_changed == 'true' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'workflow_dispatch' && inputs.deploy == true))
 
     env:
       DEPLOY_PATH: /var/www/www-root/data/www/hsepoker.ru
@@ -95,6 +172,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Deploy backend
         run: |
@@ -118,3 +197,43 @@ jobs:
             .flake8 \
             mypy.ini \
             "$DEPLOY_PATH/"
+
+  deploy_frontend:
+    needs: [changes, frontend_build]
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 20
+    environment: hsepoker-prod
+    if: >-
+      needs.changes.outputs.frontend_changed == 'true' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'workflow_dispatch' && inputs.deploy == true))
+
+    env:
+      DEPLOY_PATH: /var/www/www-root/data/www/hsepoker.ru
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Node
+        run: |
+          node --version
+          npm --version
+
+      - name: Install deps
+        run: |
+          npm -C frontend ci
+
+      - name: Build
+        run: |
+          npm -C frontend run build
+
+      - name: Deploy frontend
+        run: |
+          mkdir -p "$DEPLOY_PATH"
+          command -v rsync >/dev/null 2>&1 || (echo "rsync not found" && exit 1)
+          test -w "$DEPLOY_PATH" || (echo "No write permission for $DEPLOY_PATH" && ls -la "$DEPLOY_PATH" && exit 1)
+          rsync -a --delete \
+            frontend/dist/ "$DEPLOY_PATH/"
