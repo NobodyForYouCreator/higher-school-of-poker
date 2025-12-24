@@ -102,7 +102,7 @@ def _build_table_state(table_id: int, *, viewer_id: int, show_all: bool) -> dict
             except Exception:
                 current_player_id = None
 
-    reveal_all = show_all or (not hand_active and bool(winners))
+    reveal_all = show_all or (game is not None and phase == "finished")
 
     players: list[dict[str, Any]] = []
     for p in table.public_players():
@@ -380,13 +380,18 @@ async def table_ws(websocket: WebSocket, table_id: str) -> None:
                     await websocket.send_text(json.dumps(_ws_error("missing_action", "Missing action")))
                     continue
 
-                if table.game_state is None or not getattr(table.game_state, "hand_active", False):
+                if table.game_state is None:
                     _cancel_pending_next_hand(table_id_int)
                     try:
                         await _game_service.start_hand(table)
                     except Exception as exc:
                         await websocket.send_text(json.dumps(_ws_error("start_hand_failed", str(exc))))
                         continue
+                elif not getattr(table.game_state, "hand_active", False):
+                    await websocket.send_text(
+                        json.dumps(_ws_error("hand_not_active", "Hand is finished. Wait for the next hand."))
+                    )
+                    continue
 
                 try:
                     player_action = PlayerAction(action_str)

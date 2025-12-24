@@ -75,7 +75,7 @@ export default function TablePage() {
     if (betAmount > maxBet) setBetAmount(maxBet);
   }, [betAmount, maxBet, minBet]);
 
-  const canAct = iAmSeated && !iAmSpectator && wsStatus === "open";
+  const canAct = iAmSeated && !iAmSpectator && wsStatus === "open" && Boolean(state?.hand_active);
   const canToggleShowAll = iAmSpectator && wsStatus === "open";
 
   useEffect(() => {
